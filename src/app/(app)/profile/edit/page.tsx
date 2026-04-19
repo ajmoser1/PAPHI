@@ -46,7 +46,7 @@ export default async function ProfileEditPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Edit Profile</h1>
+        <h1 className="text-2xl font-bold text-primary tracking-tight">Edit Profile</h1>
         <p className="text-muted-foreground">Update your information visible to other members.</p>
       </div>
 

@@ -39,7 +39,7 @@ export default async function MessagesPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Messages</h1>
+        <h1 className="text-2xl font-bold text-primary tracking-tight">Messages</h1>
         <p className="text-muted-foreground">{conversations?.length ?? 0} conversations</p>
       </div>
 
