@@ -38,7 +38,7 @@ export function Sidebar({ role, unreadCount = 0, onNavClick }: SidebarProps) {
       <div className="px-3 pt-2 pb-5">
         <span
           className="text-3xl text-[var(--gold)] tracking-widest uppercase"
-          style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.12em' }}
+          style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.0em' }}
         >
           PA PHI
         </span>

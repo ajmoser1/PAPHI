@@ -24,7 +24,7 @@ export function TopNav({ firstName, mobileOpen, onToggle }: TopNavProps) {
       </Button>
       <span
         className="text-xl text-[var(--gold)]"
-        style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.12em' }}
+        style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.0em' }}
       >
         PA PHI
       </span>

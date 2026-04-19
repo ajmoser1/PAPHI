@@ -38,7 +38,7 @@ export default async function SearchPage({
     <div className="space-y-6">
       {/* Page heading */}
       <div>
-        <h1 className="text-5xl text-primary" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.0em' }}>
+        <h1 className="text-5xl text-primary" style={{ fontFamily: 'var(--font-heading)', letterSpacing: '-0.1em' }}>
           Find a Brother
         </h1>
       </div>
