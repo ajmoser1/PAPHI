@@ -56,36 +56,56 @@ export default async function AlumniProfilePage({
   return (
     <div className="max-w-2xl space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-4">
-        <Avatar className="h-20 w-20">
-          <AvatarImage src={profile.avatar_url ?? undefined} />
-          <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">
-            {profile.first_name} {profile.last_name}
-          </h1>
-          {currentPosition && (
-            <p className="text-muted-foreground">
-              {currentPosition.title} at {(currentPosition as any).companies?.name}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {profile.graduation_year && (
-              <Badge variant="secondary">
-                <Calendar className="h-3 w-3 mr-1" /> Class of {profile.graduation_year}
-              </Badge>
+      <div className="space-y-4">
+        <div className="flex items-start gap-4">
+          <Avatar className="h-20 w-20 shrink-0">
+            <AvatarImage src={profile.avatar_url ?? undefined} />
+            <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold">
+              {profile.first_name} {profile.last_name}
+            </h1>
+            {currentPosition && (
+              <p className="text-muted-foreground">
+                {currentPosition.title} at {(currentPosition as any).companies?.name}
+              </p>
             )}
-            {profile.chapter && (
-              <Badge variant="secondary">{profile.chapter}</Badge>
-            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {profile.graduation_year && (
+                <Badge variant="secondary">
+                  <Calendar className="mr-1 h-3 w-3" /> Class of {profile.graduation_year}
+                </Badge>
+              )}
+              {profile.chapter && (
+                <Badge variant="secondary">{profile.chapter}</Badge>
+              )}
+            </div>
           </div>
         </div>
+
         {!isOwnProfile && (
-          <form action={startConversation}>
-            <Button type="submit" className="gap-2">
-              <MessageSquare className="h-4 w-4" /> Message
-            </Button>
+          <form action={startConversation} className="block">
+            <div className="rounded-2xl border-2 border-primary/25 bg-gradient-to-br from-primary/[0.12] via-primary/[0.06] to-background p-4 shadow-md ring-1 ring-primary/10 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-foreground">
+                    Send a direct message
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    Reach out to {profile.first_name} privately — introductions, advice, and networking.
+                  </p>
+                </div>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-11 w-full min-w-[12rem] shrink-0 gap-2 rounded-full px-6 text-base font-semibold shadow-md hover:shadow-lg sm:w-auto"
+                >
+                  <MessageSquare className="h-5 w-5" aria-hidden />
+                  Message {profile.first_name}
+                </Button>
+              </div>
+            </div>
           </form>
         )}
       </div>
