@@ -30,6 +30,9 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
+  const isAuthRoute = pathname.startsWith('/auth/')
+  const isPendingRoute = pathname === '/auth/pending'
+  const isApiRoute = pathname.startsWith('/api/')
 
   // Public routes — no auth needed
   const isPublicRoute =
@@ -44,13 +47,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && pathname.startsWith('/auth/')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/search'
-    return NextResponse.redirect(url)
-  }
-
   if (user) {
     // Fetch profile to check status and role
     const { data: profile } = await supabase
@@ -59,20 +55,23 @@ export async function proxy(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    // If profile hasn't been created yet, keep user on pending screen.
+    if (!profile && !isPendingRoute && !isApiRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/pending'
+      return NextResponse.redirect(url)
+    }
+
     if (profile) {
       // If pending approval, only allow the pending page
-      if (
-        profile.status === 'pending_approval' &&
-        pathname !== '/auth/pending' &&
-        !pathname.startsWith('/api/')
-      ) {
+      if (profile.status === 'pending_approval' && !isPendingRoute && !isApiRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/pending'
         return NextResponse.redirect(url)
       }
 
-      // If active and on pending page, redirect to search
-      if (profile.status === 'active' && pathname === '/auth/pending') {
+      // If active and on auth pages, redirect to search
+      if (profile.status === 'active' && (isPendingRoute || isAuthRoute)) {
         const url = request.nextUrl.clone()
         url.pathname = '/search'
         return NextResponse.redirect(url)
