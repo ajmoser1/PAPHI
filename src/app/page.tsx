@@ -29,7 +29,7 @@ export default function Home() {
               Sigma Alpha Epsilon PA PHI
             </h1>
             <p className="max-w-2xl text-lg text-foreground sm:text-xl">
-              Find alumni by role or industry for referrals, mentorship, and opportunities.
+              Find brothers by role or industry for referrals, mentorship, and opportunities.
             </p>
             <div className="flex flex-wrap justify-center gap-3 pt-1">
               <Link href="/auth/register" className={cn(buttonVariants({ size: "lg" }))}>

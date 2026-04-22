@@ -21,7 +21,7 @@ const spectral = Spectral({
 
 export const metadata: Metadata = {
   title: "PA PHI",
-  description: "Connect with fraternity alumni",
+  description: "Connect with PA PHI alumni",
 };
 
 export default function RootLayout({
