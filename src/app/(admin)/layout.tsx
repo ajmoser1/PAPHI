@@ -30,6 +30,7 @@ export default async function AdminLayout({
         </div>
         {[
           { href: '/admin/approvals', label: 'Approvals' },
+          { href: '/admin/profiles', label: 'Profiles' },
           { href: '/admin/companies', label: 'Companies' },
           { href: '/admin/industries', label: 'Industries' },
           { href: '/dashboard', label: '← Back to app' },

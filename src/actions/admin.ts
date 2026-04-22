@@ -14,7 +14,7 @@ async function requireAdmin() {
     .eq('id', user.id)
     .single()
   if (profile?.role !== 'admin') throw new Error('Forbidden')
-  return { supabase, adminClient: createAdminClient() }
+  return { supabase, adminClient: createAdminClient(), userId: user.id }
 }
 
 export async function approveUser(profileId: string) {
@@ -34,6 +34,7 @@ export async function approveUser(profileId: string) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/admin/approvals')
+  revalidatePath('/admin/profiles')
 }
 
 export async function rejectUser(profileId: string) {
@@ -45,6 +46,41 @@ export async function rejectUser(profileId: string) {
     .eq('id', profileId)
   if (error) throw new Error(error.message)
   revalidatePath('/admin/approvals')
+}
+
+export async function removeAcceptedProfile(profileId: string) {
+  const { adminClient, userId } = await requireAdmin()
+
+  if (profileId === userId) {
+    throw new Error('You cannot remove your own profile.')
+  }
+
+  const { data: targetProfile } = await adminClient
+    .from('profiles')
+    .select('id, status, role')
+    .eq('id', profileId)
+    .single()
+
+  if (!targetProfile) {
+    throw new Error('Profile not found.')
+  }
+
+  if (targetProfile.role === 'admin') {
+    throw new Error('Cannot remove another admin profile.')
+  }
+
+  if (targetProfile.status !== 'active') {
+    throw new Error('Only accepted profiles can be removed.')
+  }
+
+  const { error } = await adminClient
+    .from('profiles')
+    .update({ status: 'suspended' })
+    .eq('id', profileId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/admin/profiles')
+  revalidatePath('/search')
 }
 
 const companySchema = z.object({
