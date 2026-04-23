@@ -5,34 +5,45 @@ import { Input } from '@/components/ui/input'
 import { ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface SearchParams {
-  q?: string
-  industry?: string
-  company?: string
+/** Next.js may pass repeated keys as string[]; HTML forms use "" for unselected <select>. */
+function firstParam(value: string | string[] | undefined): string | undefined {
+  if (value === undefined) return undefined
+  return Array.isArray(value) ? value[0] : value
+}
+
+function uuidOrNull(value: string | undefined): string | null {
+  const v = value?.trim()
+  return v ? v : null
 }
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { q, industry, company } = await searchParams
+  const raw = await searchParams
+  const q = (firstParam(raw.q) ?? '').trim()
+  const industryParam = firstParam(raw.industry)
+  const companyParam = firstParam(raw.company)
+  const filterIndustryId = uuidOrNull(industryParam)
+  const filterCompanyId = uuidOrNull(companyParam)
+
   const supabase = await createClient()
 
   const [{ data: industries }, { data: companies }, { data: results }] = await Promise.all([
     supabase.from('industries').select('id, name').order('name'),
     supabase.from('companies').select('id, name').eq('status', 'active').order('name'),
     supabase.rpc('search_alumni', {
-      search_query: q ?? '',
-      filter_industry_id: industry ?? null,
-      filter_company_id: company ?? null,
+      search_query: q,
+      filter_industry_id: filterIndustryId,
+      filter_company_id: filterCompanyId,
       result_limit: 100,
       result_offset: 0,
     }),
   ])
 
   const alumni = results ?? []
-  const hasFilters = !!(q || industry || company)
+  const hasFilters = !!(q || filterIndustryId || filterCompanyId)
 
   return (
     <div className="space-y-6">
@@ -44,11 +55,11 @@ export default async function SearchPage({
       </div>
 
       {/* Search & filters */}
-      <form className="space-y-3">
+      <form method="get" className="space-y-3">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
           <Input
-            key={q ?? ''}
+            key={q}
             name="q"
             defaultValue={q}
             placeholder="Search by name, company, or industry…"
@@ -60,7 +71,7 @@ export default async function SearchPage({
           <div className="relative">
             <select
               name="industry"
-              defaultValue={industry ?? ''}
+              defaultValue={filterIndustryId ?? ''}
               className="h-9 appearance-none rounded-full border border-border bg-background pl-4 pr-8 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
             >
               <option value="">Industry</option>
@@ -74,7 +85,7 @@ export default async function SearchPage({
           <div className="relative">
             <select
               name="company"
-              defaultValue={company ?? ''}
+              defaultValue={filterCompanyId ?? ''}
               className="h-9 appearance-none rounded-full border border-border bg-background pl-4 pr-8 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
             >
               <option value="">Company</option>
