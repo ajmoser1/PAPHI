@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Linkedin, Loader2, CheckSquare, Square, Upload } from 'lucide-react'
+import { ExternalLink, Loader2, CheckSquare, Square, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { parseLinkedInPdf, type ExtractedPosition } from '@/actions/linkedin'
 import { createPosition } from '@/actions/profile'
@@ -119,7 +119,7 @@ export function LinkedInImport({ industries }: Props) {
           className="text-muted-foreground gap-2"
           onClick={() => inputRef.current?.click()}
         >
-          <Linkedin className="h-4 w-4" />
+          <ExternalLink className="h-4 w-4" />
           Import from LinkedIn PDF
         </Button>
       </>

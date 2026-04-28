@@ -89,7 +89,7 @@ export async function uploadAvatar(formData: FormData) {
   // Delete any existing avatar for this user to avoid accumulating old files
   const { data: existing } = await admin.storage.from('avatars').list(userId)
   if (existing?.length) {
-    await admin.storage.from('avatars').remove(existing.map((f) => `${userId}/${f.name}`))
+    await admin.storage.from('avatars').remove(existing.map((f: { name: string }) => `${userId}/${f.name}`))
   }
 
   const { error: uploadError } = await admin.storage
