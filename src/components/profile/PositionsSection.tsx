@@ -166,9 +166,20 @@ export function PositionsSection({ positions, companies, industries }: Props) {
           </div>
         </form>
       ) : (
-        <Button type="button" variant="outline" size="sm" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Add position
-        </Button>
+        <div className="rounded-xl border-2 border-dashed border-primary/35 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground">
+            Add your work experience so brothers can find you by company and industry.
+          </p>
+          <Button
+            type="button"
+            size="lg"
+            className="mt-3 h-14 w-full text-base font-semibold"
+            onClick={() => setShowForm(true)}
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Add Work Experience
+          </Button>
+        </div>
       )}
     </div>
   )
