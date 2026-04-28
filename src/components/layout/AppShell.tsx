@@ -15,7 +15,7 @@ export function AppShell({ children, role, firstName, unreadCount = 0 }: AppShel
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[oklch(0.97_0.005_78)]">
+    <div className="flex h-dvh overflow-hidden bg-[oklch(0.97_0.005_78)]">
       {/* Sidebar — width animates on mobile, fixed on desktop */}
       <div
         className={[

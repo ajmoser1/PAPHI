@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, Plus } from 'lucide-react'
+import { LinkedInImport } from './LinkedInImport'
 
 interface Position {
   id: string
@@ -166,19 +167,25 @@ export function PositionsSection({ positions, companies, industries }: Props) {
           </div>
         </form>
       ) : (
-        <div className="rounded-xl border-2 border-dashed border-primary/35 bg-primary/5 p-4">
+        <div className="rounded-xl border-2 border-dashed border-primary/35 bg-primary/5 p-4 space-y-3">
           <p className="text-sm font-medium text-foreground">
             Add your work experience so brothers can find you by company and industry.
           </p>
           <Button
             type="button"
             size="lg"
-            className="mt-3 h-14 w-full text-base font-semibold"
+            className="h-14 w-full text-base font-semibold"
             onClick={() => setShowForm(true)}
           >
             <Plus className="mr-2 h-5 w-5" />
             Add Work Experience
           </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <LinkedInImport industries={industries} />
         </div>
       )}
     </div>

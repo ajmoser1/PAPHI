@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef } from 'react'
 import { toast } from 'sonner'
-import Image from 'next/image'
 import { uploadAvatar } from '@/actions/profile'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'

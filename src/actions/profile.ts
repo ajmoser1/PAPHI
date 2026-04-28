@@ -79,16 +79,26 @@ export async function uploadAvatar(formData: FormData) {
   if (!file || file.size === 0) return { message: 'No file provided.' }
   if (file.size > 5 * 1024 * 1024) return { message: 'File too large (max 5MB).' }
 
-  const ext = file.name.split('.').pop()
-  const path = `${userId}/avatar.${ext}`
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${userId}/avatar-${Date.now()}.${ext}`
 
-  const { error: uploadError } = await supabase.storage
+  // Use admin client to bypass storage RLS
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const admin = createAdminClient()
+
+  // Delete any existing avatar for this user to avoid accumulating old files
+  const { data: existing } = await admin.storage.from('avatars').list(userId)
+  if (existing?.length) {
+    await admin.storage.from('avatars').remove(existing.map((f) => `${userId}/${f.name}`))
+  }
+
+  const { error: uploadError } = await admin.storage
     .from('avatars')
-    .upload(path, file, { upsert: true })
+    .upload(path, file, { upsert: false })
 
   if (uploadError) return { message: uploadError.message }
 
-  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  const { data } = admin.storage.from('avatars').getPublicUrl(path)
 
   const { error: updateError } = await supabase
     .from('profiles')
