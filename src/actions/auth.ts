@@ -4,6 +4,21 @@ import { redirect } from 'next/navigation'
 import * as z from 'zod'
 import { createClient } from '@/lib/supabase/server'
 
+function formatAuthErrorMessage(message: string): string {
+  const normalized = message.toLowerCase()
+
+  if (
+    normalized.includes('password') &&
+    normalized.includes('uppercase') &&
+    normalized.includes('lowercase') &&
+    normalized.includes('number')
+  ) {
+    return 'Your password must include an uppercase character, a lowercase character, and a number.'
+  }
+
+  return message
+}
+
 const loginSchema = z.object({
   email: z.email({ error: 'Please enter a valid email.' }),
   password: z.string().min(6, { error: 'Password must be at least 6 characters.' }),
@@ -36,7 +51,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   const { error } = await supabase.auth.signInWithPassword(validated.data)
 
   if (error) {
-    return { message: error.message }
+    return { message: formatAuthErrorMessage(error.message) }
   }
 
   redirect('/search')
@@ -67,7 +82,7 @@ export async function register(prevState: AuthState, formData: FormData): Promis
   })
 
   if (error) {
-    return { message: error.message }
+    return { message: formatAuthErrorMessage(error.message) }
   }
 
   redirect('/auth/pending')
