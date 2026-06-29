@@ -17,15 +17,17 @@ function uuidOrNull(value: string | undefined): string | null {
   return v ? v : null
 }
 
-type MemberResult = {
+type SearchRow = {
   profile_id: string
   first_name: string
   last_name: string
   avatar_url: string | null
-  role: string
+  role?: string
   current_company: string | null
-  graduation_year: number | null
+  graduation_year?: number | null
 }
+
+type MemberResult = SearchRow & { role: string; graduation_year: number | null }
 
 export default async function MembersPage({
   searchParams,
@@ -45,17 +47,32 @@ export default async function MembersPage({
   const [{ data: industries }, { data: companies }, { data: results }] = await Promise.all([
     supabase.from('industries').select('id, name').order('name'),
     supabase.from('companies').select('id, name').eq('status', 'active').order('name'),
-    supabase.rpc('search_members', {
-      search_query: q,
-      filter_industry_id: filterIndustryId,
-      filter_company_id: filterCompanyId,
-      filter_alumni_only: alumniOnly,
-      result_limit: 100,
-      result_offset: 0,
-    }),
+    alumniOnly
+      ? supabase.rpc('search_alumni', {
+          search_query: q,
+          filter_industry_id: filterIndustryId,
+          filter_company_id: filterCompanyId,
+          result_limit: 100,
+          result_offset: 0,
+        })
+      : supabase.rpc('search_members', {
+          search_query: q,
+          filter_industry_id: filterIndustryId,
+          filter_company_id: filterCompanyId,
+          result_limit: 100,
+          result_offset: 0,
+        }),
   ])
 
-  const members = (results ?? []) as MemberResult[]
+  const members: MemberResult[] = ((results ?? []) as SearchRow[]).map((person) => ({
+    profile_id: person.profile_id,
+    first_name: person.first_name,
+    last_name: person.last_name,
+    avatar_url: person.avatar_url,
+    role: alumniOnly ? 'alumni' : (person.role ?? 'undergrad'),
+    current_company: person.current_company,
+    graduation_year: person.graduation_year ?? null,
+  }))
   const hasFilters = !!(q || filterIndustryId || filterCompanyId || alumniOnly)
 
   return (
