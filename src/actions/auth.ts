@@ -72,7 +72,7 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
     return { message: formatAuthErrorMessage(error.message) }
   }
 
-  redirect('/search')
+  redirect('/members')
 }
 
 export async function register(prevState: AuthState, formData: FormData): Promise<AuthState> {
@@ -147,7 +147,7 @@ export async function resetPassword(prevState: AuthState, formData: FormData): P
     return { message: formatAuthErrorMessage(error.message) }
   }
 
-  redirect('/search')
+  redirect('/members')
 }
 
 export async function logout() {

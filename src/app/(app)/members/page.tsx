@@ -36,6 +36,7 @@ export default async function MembersPage({
   const q = (firstParam(raw.q) ?? '').trim()
   const industryParam = firstParam(raw.industry)
   const companyParam = firstParam(raw.company)
+  const alumniOnly = firstParam(raw.alumni) === '1'
   const filterIndustryId = uuidOrNull(industryParam)
   const filterCompanyId = uuidOrNull(companyParam)
 
@@ -48,13 +49,14 @@ export default async function MembersPage({
       search_query: q,
       filter_industry_id: filterIndustryId,
       filter_company_id: filterCompanyId,
+      filter_alumni_only: alumniOnly,
       result_limit: 100,
       result_offset: 0,
     }),
   ])
 
   const members = (results ?? []) as MemberResult[]
-  const hasFilters = !!(q || filterIndustryId || filterCompanyId)
+  const hasFilters = !!(q || filterIndustryId || filterCompanyId || alumniOnly)
 
   return (
     <div className="space-y-6">
@@ -66,7 +68,9 @@ export default async function MembersPage({
           Find a Brother
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Search all members across the chapter
+          {alumniOnly
+            ? 'Search alumni across the chapter'
+            : 'Search all members across the chapter'}
         </p>
       </div>
 
@@ -115,6 +119,24 @@ export default async function MembersPage({
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           </div>
 
+          <label
+            className={cn(
+              'inline-flex h-9 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm transition-colors select-none',
+              alumniOnly
+                ? 'border-[var(--gold)]/60 bg-[var(--gold)]/10 text-primary'
+                : 'border-border bg-background text-muted-foreground hover:bg-muted/50'
+            )}
+          >
+            <input
+              type="checkbox"
+              name="alumni"
+              value="1"
+              defaultChecked={alumniOnly}
+              className="h-3.5 w-3.5 rounded border-border accent-[var(--gold)]"
+            />
+            Alumni only
+          </label>
+
           <Button type="submit" size="sm" className="h-9 rounded-full px-5">
             Search
           </Button>
@@ -142,7 +164,7 @@ export default async function MembersPage({
 
       {members.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
-          <p className="font-medium">No members found</p>
+          <p className="font-medium">{alumniOnly ? 'No alumni found' : 'No members found'}</p>
           <p className="text-sm mt-1">Try adjusting your search or filters</p>
         </div>
       ) : (

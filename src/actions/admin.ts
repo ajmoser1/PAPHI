@@ -80,7 +80,7 @@ export async function removeAcceptedProfile(profileId: string) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/admin/profiles')
-  revalidatePath('/search')
+  revalidatePath('/members')
 }
 
 const companySchema = z.object({

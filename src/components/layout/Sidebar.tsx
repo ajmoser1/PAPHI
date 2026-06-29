@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Search, Users, MessageSquare, User, Shield, LogOut } from 'lucide-react'
+import { Users, MessageSquare, User, Shield, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/actions/auth'
 import { cn } from '@/lib/utils'
@@ -23,8 +23,7 @@ export function Sidebar({ role, unreadCount = 0, onNavClick }: SidebarProps) {
   const pathname = usePathname()
 
   const navItems: NavItem[] = [
-    { href: '/search', label: 'Search Alumni', icon: <Search className="h-4 w-4" /> },
-    { href: '/members', label: 'Search Members', icon: <Users className="h-4 w-4" /> },
+    { href: '/members', label: 'Find a Brother', icon: <Users className="h-4 w-4" /> },
     { href: '/messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> },
     { href: '/profile/edit', label: 'Profile', icon: <User className="h-4 w-4" /> },
   ]

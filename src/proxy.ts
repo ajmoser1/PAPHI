@@ -78,7 +78,7 @@ export async function proxy(request: NextRequest) {
         (isPendingRoute || (isAuthRoute && !isPasswordRecoveryRoute))
       ) {
         const url = request.nextUrl.clone()
-        url.pathname = '/search'
+        url.pathname = '/members'
         return NextResponse.redirect(url)
       }
 
@@ -88,7 +88,7 @@ export async function proxy(request: NextRequest) {
         profile.role !== 'admin'
       ) {
         const url = request.nextUrl.clone()
-        url.pathname = '/search'
+        url.pathname = '/members'
         return NextResponse.redirect(url)
       }
     }

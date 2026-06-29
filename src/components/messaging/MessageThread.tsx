@@ -126,7 +126,7 @@ export function MessageThread({
         <div>
           {otherProfile ? (
             <Link
-              href={`/alumni/${otherProfile.id}`}
+              href={`/members/${otherProfile.id}`}
               className="font-medium text-sm hover:underline"
             >
               {otherProfile.first_name} {otherProfile.last_name}
