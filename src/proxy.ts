@@ -32,6 +32,8 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/auth/')
   const isPendingRoute = pathname === '/auth/pending'
+  const isPasswordRecoveryRoute =
+    pathname === '/auth/forgot-password' || pathname === '/auth/reset-password'
   const isApiRoute = pathname.startsWith('/api/')
 
   // Public routes — no auth needed
@@ -70,8 +72,11 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // If active and on auth pages, redirect to search
-      if (profile.status === 'active' && (isPendingRoute || isAuthRoute)) {
+      // If active and on auth pages, redirect to search (except password recovery)
+      if (
+        profile.status === 'active' &&
+        (isPendingRoute || (isAuthRoute && !isPasswordRecoveryRoute))
+      ) {
         const url = request.nextUrl.clone()
         url.pathname = '/search'
         return NextResponse.redirect(url)
@@ -90,10 +95,4 @@ export async function proxy(request: NextRequest) {
   }
 
   return supabaseResponse
-}
-
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
 }

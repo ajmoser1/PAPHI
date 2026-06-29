@@ -32,6 +32,24 @@ const registerSchema = z.object({
   role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
 })
 
+const forgotPasswordSchema = z.object({
+  email: z.email({ error: 'Please enter a valid email.' }),
+})
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, { error: 'Password must be at least 8 characters.' }),
+    confirmPassword: z.string().min(8, { error: 'Please confirm your password.' }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmPassword'],
+  })
+
+function getSiteOrigin(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+}
+
 export type AuthState = {
   errors?: Record<string, string[]>
   message?: string
@@ -86,6 +104,50 @@ export async function register(prevState: AuthState, formData: FormData): Promis
   }
 
   redirect('/auth/pending')
+}
+
+export async function requestPasswordReset(
+  prevState: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const validated = forgotPasswordSchema.safeParse({
+    email: formData.get('email'),
+  })
+
+  if (!validated.success) {
+    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const supabase = await createClient()
+  const origin = getSiteOrigin()
+  await supabase.auth.resetPasswordForEmail(validated.data.email, {
+    redirectTo: `${origin}/api/auth/callback?next=/auth/reset-password`,
+  })
+
+  return {
+    message:
+      'If an account exists for that email, you will receive a password reset link shortly.',
+  }
+}
+
+export async function resetPassword(prevState: AuthState, formData: FormData): Promise<AuthState> {
+  const validated = resetPasswordSchema.safeParse({
+    password: formData.get('password'),
+    confirmPassword: formData.get('confirmPassword'),
+  })
+
+  if (!validated.success) {
+    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.updateUser({ password: validated.data.password })
+
+  if (error) {
+    return { message: formatAuthErrorMessage(error.message) }
+  }
+
+  redirect('/search')
 }
 
 export async function logout() {
