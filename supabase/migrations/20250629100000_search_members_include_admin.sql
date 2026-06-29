@@ -1,6 +1,4 @@
--- search_members: directory of active undergrad, alumni, and admin profiles.
--- Mirrors search_alumni parameters; broadens role filter and returns role + graduation_year.
--- Run in Supabase SQL Editor or via Supabase CLI.
+-- Include active admin profiles in the member directory search.
 
 CREATE OR REPLACE FUNCTION search_members(
   search_query text DEFAULT '',
@@ -35,7 +33,7 @@ AS $$
   matching_profiles AS (
     SELECT p.id
     FROM profiles p
-  LEFT JOIN current_positions cp ON cp.profile_id = p.id
+    LEFT JOIN current_positions cp ON cp.profile_id = p.id
     WHERE p.status = 'active'
       AND p.role IN ('undergrad', 'alumni', 'admin')
       AND (

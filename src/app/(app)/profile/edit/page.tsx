@@ -41,8 +41,6 @@ export default async function ProfileEditPage() {
 
   if (!profile) redirect('/dashboard')
 
-  const isAlumni = profile.role === 'alumni'
-
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
@@ -56,24 +54,20 @@ export default async function ProfileEditPage() {
 
       <ProfileEditForm profile={profile} />
 
-      {isAlumni && (
-        <>
-          <Separator />
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Work Experience</h2>
-            <PositionsSection
-              positions={positions ?? []}
-              companies={companies ?? []}
-              industries={industries ?? []}
-            />
-          </div>
-          <Separator />
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
-            <ContactForm contact={contact} />
-          </div>
-        </>
-      )}
+      <Separator />
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Work Experience</h2>
+        <PositionsSection
+          positions={positions ?? []}
+          companies={companies ?? []}
+          industries={industries ?? []}
+        />
+      </div>
+      <Separator />
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
+        <ContactForm contact={contact} />
+      </div>
     </div>
   )
 }

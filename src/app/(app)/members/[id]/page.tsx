@@ -43,12 +43,13 @@ export default async function MemberProfilePage({
   if (
     !profile ||
     profile.status !== 'active' ||
-    (profile.role !== 'undergrad' && profile.role !== 'alumni')
+    (profile.role !== 'undergrad' && profile.role !== 'alumni' && profile.role !== 'admin')
   ) {
     notFound()
   }
 
   const isAlumni = profile.role === 'alumni'
+  const isAdmin = profile.role === 'admin'
   const initials = `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
   const currentPosition = positions?.find((p) => p.is_current)
   const isOwnProfile = user.id === id
@@ -79,9 +80,12 @@ export default async function MemberProfilePage({
               </h1>
               <Badge
                 variant={isAlumni ? 'default' : 'secondary'}
-                className={cn(isAlumni && 'bg-[var(--gold)] text-primary hover:bg-[var(--gold)]')}
+                className={cn(
+                  isAlumni && 'bg-[var(--gold)] text-primary hover:bg-[var(--gold)]',
+                  isAdmin && 'bg-primary text-primary-foreground hover:bg-primary'
+                )}
               >
-                {isAlumni ? 'Alumni' : 'Undergrad'}
+                {isAlumni ? 'Alumni' : isAdmin ? 'Admin' : 'Undergrad'}
               </Badge>
             </div>
             {currentPosition && (

@@ -66,7 +66,7 @@ export default async function MembersPage({
           Find a Brother
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Search all members — undergrads and alumni — across the chapter.
+          Search all members across the chapter
         </p>
       </div>
 
@@ -149,6 +149,8 @@ export default async function MembersPage({
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {members.map((person) => {
             const isAlumni = person.role === 'alumni'
+            const isAdmin = person.role === 'admin'
+            const roleLabel = isAlumni ? 'Alumni' : isAdmin ? 'Admin' : 'Undergrad'
             return (
               <Link key={person.profile_id} href={`/members/${person.profile_id}`}>
                 <div
@@ -169,10 +171,11 @@ export default async function MembersPage({
                         variant={isAlumni ? 'default' : 'secondary'}
                         className={cn(
                           'text-[10px] uppercase tracking-wide',
-                          isAlumni && 'bg-[var(--gold)] text-primary hover:bg-[var(--gold)]'
+                          isAlumni && 'bg-[var(--gold)] text-primary hover:bg-[var(--gold)]',
+                          isAdmin && 'bg-primary text-primary-foreground hover:bg-primary'
                         )}
                       >
-                        {isAlumni ? 'Alumni' : 'Undergrad'}
+                        {roleLabel}
                       </Badge>
                     </div>
                     <div className="absolute inset-0 bg-primary/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
