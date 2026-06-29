@@ -1,6 +1,6 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Anthropic from '@anthropic-ai/sdk'
 
 export interface ExtractedPosition {
   company_name: string
@@ -20,11 +20,13 @@ export async function parseLinkedInPdf(
   if (file.size > 20 * 1024 * 1024) return { message: 'PDF too large (max 20MB).' }
   if (file.type !== 'application/pdf') return { message: 'File must be a PDF.' }
 
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return { message: 'Anthropic API key is not configured.' }
+
   const buffer = await file.arrayBuffer()
   const base64 = Buffer.from(buffer).toString('base64')
 
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const client = new Anthropic({ apiKey })
 
   const prompt = `Extract all work experience positions from this LinkedIn profile PDF.
 Return ONLY a valid JSON array — no markdown fences, no explanation. Each item:
@@ -40,15 +42,37 @@ If no positions are found return an empty array [].`
 
   let raw: string
   try {
-    const result = await model.generateContent([
-      { inlineData: { data: base64, mimeType: 'application/pdf' } },
-      prompt,
-    ])
-    raw = result.response.text().trim()
-    // Strip markdown fences if the model adds them anyway
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: base64,
+              },
+            },
+            { type: 'text', text: prompt },
+          ],
+        },
+      ],
+    })
+
+    const textBlock = message.content.find((block) => block.type === 'text')
+    if (!textBlock || textBlock.type !== 'text') {
+      return { message: 'No response from Claude.' }
+    }
+
+    raw = textBlock.text.trim()
     raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-  } catch (err: any) {
-    return { message: err?.message ?? 'Failed to contact Gemini API.' }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to contact Claude API.'
+    return { message }
   }
 
   try {
