@@ -1,6 +1,6 @@
 'use server'
 
-import Anthropic from '@anthropic-ai/sdk'
+import Anthropic, { APIError } from '@anthropic-ai/sdk'
 
 export interface ExtractedPosition {
   company_name: string
@@ -71,6 +71,16 @@ If no positions are found return an empty array [].`
     raw = textBlock.text.trim()
     raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
   } catch (err: unknown) {
+    if (err instanceof APIError) {
+      const apiMessage = (err.error as { message?: string } | undefined)?.message
+      if (apiMessage?.toLowerCase().includes('credit balance is too low')) {
+        return {
+          message:
+            'PDF import is unavailable — the Anthropic API account has no credits. Add credits at console.anthropic.com, then try again.',
+        }
+      }
+      return { message: apiMessage ?? err.message }
+    }
     const message = err instanceof Error ? err.message : 'Failed to contact Claude API.'
     return { message }
   }

@@ -165,6 +165,63 @@ export async function createPosition(formData: FormData) {
   return { success: true }
 }
 
+export async function updatePosition(positionId: string, formData: FormData) {
+  const { supabase, userId } = await requireAuth()
+
+  const companyName = (formData.get('companyName') as string)?.trim()
+  const title = (formData.get('title') as string)?.trim()
+  const industryId = (formData.get('industryId') as string) || null
+  const startYear = formData.get('startYear') ? Number(formData.get('startYear')) : null
+  const isCurrent = formData.get('isCurrent') === 'true'
+  const endYear = isCurrent ? null : (formData.get('endYear') ? Number(formData.get('endYear')) : null)
+
+  if (!companyName) return { message: 'Company name is required.' }
+  if (!title) return { message: 'Title is required.' }
+
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin
+    .from('companies')
+    .select('id')
+    .ilike('name', companyName)
+    .limit(1)
+    .maybeSingle()
+
+  let companyId: string
+
+  if (existing) {
+    companyId = existing.id
+  } else {
+    const baseSlug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
+    const { data: created, error: createErr } = await admin
+      .from('companies')
+      .insert({ name: companyName, slug, status: 'active', suggested_by: userId })
+      .select('id')
+      .single()
+    if (createErr || !created) return { message: 'Could not save company.' }
+    companyId = created.id
+  }
+
+  const { error } = await supabase
+    .from('positions')
+    .update({
+      company_id: companyId,
+      title,
+      industry_id: industryId,
+      start_year: startYear,
+      end_year: endYear,
+      is_current: isCurrent,
+    })
+    .eq('id', positionId)
+    .eq('profile_id', userId)
+
+  if (error) return { message: error.message }
+  revalidatePath('/profile/edit')
+  return { success: true }
+}
+
 export async function deletePosition(positionId: string) {
   const { supabase, userId } = await requireAuth()
   const { error } = await supabase
