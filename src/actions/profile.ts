@@ -110,6 +110,27 @@ export async function uploadAvatar(formData: FormData) {
   return { success: true, url: data.publicUrl }
 }
 
+export async function removeAvatar() {
+  const { supabase, userId } = await requireAuth()
+
+  const { createAdminClient } = await import('@/lib/supabase/server')
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin.storage.from('avatars').list(userId)
+  if (existing?.length) {
+    await admin.storage.from('avatars').remove(existing.map((f: { name: string }) => `${userId}/${f.name}`))
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: null })
+    .eq('id', userId)
+
+  if (error) return { message: error.message }
+  revalidatePath('/profile/edit')
+  return { success: true }
+}
+
 export async function createPosition(formData: FormData) {
   const { supabase, userId } = await requireAuth()
 
