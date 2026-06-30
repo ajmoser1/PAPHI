@@ -13,6 +13,7 @@ import {
   assignChapterAdminFromForm,
   suspendChapter,
 } from '@/actions/founder'
+import { inviteRegisterUrl } from '@/lib/site'
 import { ROLES } from '@/lib/constants'
 
 export default async function FounderPage() {
@@ -146,7 +147,7 @@ export default async function FounderPage() {
                   )}
                 </div>
                 <div className="text-xs bg-muted p-2 rounded font-mono break-all">
-                  Invite: /auth/register?invite={ch.invite_token}
+                  Invite: {inviteRegisterUrl(ch.invite_token)}
                 </div>
                 <form action={assignChapterAdminFromForm.bind(null, ch.id)} className="flex gap-2">
                   <Input name="email" type="email" placeholder="Admin email" required className="max-w-xs" />

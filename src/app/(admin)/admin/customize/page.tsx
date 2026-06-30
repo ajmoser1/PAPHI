@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { inviteRegisterUrl } from '@/lib/site'
 
 export default async function CustomizePage() {
   const { profile, adminClient } = await requireChapterAdmin()
@@ -87,7 +88,7 @@ export default async function CustomizePage() {
         <CardContent>
           <p className="text-sm text-muted-foreground mb-2">Share this link with brothers to register:</p>
           <code className="text-xs bg-muted p-2 rounded block break-all">
-            /auth/register?invite={chapter.invite_token}
+            {inviteRegisterUrl(chapter.invite_token)}
           </code>
         </CardContent>
       </Card>
