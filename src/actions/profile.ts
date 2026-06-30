@@ -11,6 +11,23 @@ async function requireAuth() {
   return { supabase, userId: user.id }
 }
 
+async function updateFeaturedPosition(userId: string, positionId: string | null) {
+  const supabase = await createClient()
+  let { error } = await supabase
+    .from('profiles')
+    .update({ featured_position_id: positionId })
+    .eq('id', userId)
+
+  if (error) {
+    ;({ error } = await createAdminClient()
+      .from('profiles')
+      .update({ featured_position_id: positionId })
+      .eq('id', userId))
+  }
+
+  return error
+}
+
 const profileSchema = z.object({
   firstName: z.string().min(2, { error: 'First name required.' }),
   lastName: z.string().min(2, { error: 'Last name required.' }),
@@ -193,13 +210,50 @@ export async function createPosition(formData: FormData) {
     is_current: isCurrent,
   }
 
-  let { error } = await supabase.from('positions').insert(position)
+  let { data: created, error } = await supabase
+    .from('positions')
+    .insert(position)
+    .select('id')
+    .single()
+
   if (error) {
-    ;({ error } = await admin.from('positions').insert(position))
+    ;({ data: created, error } = await admin.from('positions').insert(position).select('id').single())
   }
 
-  if (error) return { message: error.message }
+  if (error || !created) return { message: error?.message ?? 'Could not save position.' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('featured_position_id')
+    .eq('id', userId)
+    .single()
+
+  if (!profile?.featured_position_id) {
+    await updateFeaturedPosition(userId, created.id)
+  }
+
   revalidatePath('/profile/edit')
+  revalidatePath('/members')
+  return { success: true }
+}
+
+export async function setFeaturedPosition(positionId: string) {
+  const { supabase, userId } = await requireAuth()
+
+  const { data: position } = await supabase
+    .from('positions')
+    .select('id')
+    .eq('id', positionId)
+    .eq('profile_id', userId)
+    .single()
+
+  if (!position) return { message: 'Position not found.' }
+
+  const error = await updateFeaturedPosition(userId, positionId)
+  if (error) return { message: error.message }
+
+  revalidatePath('/profile/edit')
+  revalidatePath('/members')
   return { success: true }
 }
 
@@ -272,6 +326,15 @@ export async function updatePosition(positionId: string, formData: FormData) {
 
 export async function deletePosition(positionId: string) {
   const { supabase, userId } = await requireAuth()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('featured_position_id')
+    .eq('id', userId)
+    .single()
+
+  const wasFeatured = profile?.featured_position_id === positionId
+
   let { error } = await supabase
     .from('positions')
     .delete()
@@ -288,6 +351,20 @@ export async function deletePosition(positionId: string) {
   }
 
   if (error) return { message: error.message }
+
+  if (wasFeatured) {
+    const { data: remaining } = await supabase
+      .from('positions')
+      .select('id')
+      .eq('profile_id', userId)
+      .order('is_current', { ascending: false })
+      .order('start_year', { ascending: false })
+      .limit(1)
+
+    await updateFeaturedPosition(userId, remaining?.[0]?.id ?? null)
+  }
+
   revalidatePath('/profile/edit')
+  revalidatePath('/members')
   return { success: true }
 }

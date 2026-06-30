@@ -24,7 +24,7 @@ export function RegisterForm({ chapters = [] }: { chapters?: ChapterOption[] }) 
         <CardDescription>
           {inviteToken
             ? "You've been invited to join your chapter network."
-            : 'Join your chapter network — you can complete your profile while awaiting approval.'}
+            : 'Join your chapter network. You can complete your profile while awaiting approval.'}
         </CardDescription>
       </CardHeader>
       <form action={action}>

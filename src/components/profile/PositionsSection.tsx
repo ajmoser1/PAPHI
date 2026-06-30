@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { createPosition, deletePosition, updatePosition } from '@/actions/profile'
+import { createPosition, deletePosition, setFeaturedPosition, updatePosition } from '@/actions/profile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, Pencil } from 'lucide-react'
+import { Trash2, Plus, Pencil, Star } from 'lucide-react'
 import { LinkedInImport } from './LinkedInImport'
 
 interface Position {
@@ -27,6 +27,7 @@ interface Props {
   positions: Position[]
   companies: Company[]
   industries: Industry[]
+  featuredPositionId: string | null
 }
 
 interface PositionFormValues {
@@ -175,10 +176,14 @@ function PositionForm({
   )
 }
 
-export function PositionsSection({ positions, companies, industries }: Props) {
+export function PositionsSection({ positions, companies, industries, featuredPositionId }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const resolvedFeaturedId =
+    featuredPositionId ?? (positions.length === 1 ? positions[0]?.id ?? null : null)
+  const canChooseDisplay = positions.length > 1
 
   function closeForms() {
     setShowForm(false)
@@ -203,6 +208,17 @@ export function PositionsSection({ positions, companies, industries }: Props) {
       else {
         toast.success('Position updated.')
         closeForms()
+      }
+    })
+  }
+
+  function handleSetFeatured(positionId: string) {
+    startTransition(async () => {
+      const result = await setFeaturedPosition(positionId)
+      if ((result as { message?: string })?.message) {
+        toast.error((result as { message: string }).message)
+      } else {
+        toast.success('Updated the job shown on your profile.')
       }
     })
   }
@@ -248,12 +264,24 @@ export function PositionsSection({ positions, companies, industries }: Props) {
             onCancel={closeForms}
           />
         ) : (
-          <div key={pos.id} className="flex items-start justify-between rounded-lg border bg-white p-4">
+          <div
+            key={pos.id}
+            className={[
+              'flex items-start justify-between rounded-lg border bg-white p-4',
+              resolvedFeaturedId === pos.id ? 'border-primary/50 ring-1 ring-primary/20' : '',
+            ].join(' ')}
+          >
             <div>
               <p className="font-medium text-sm">{pos.title}</p>
               <p className="text-sm text-muted-foreground">{pos.companies?.name}</p>
-              <div className="flex items-center gap-2 mt-1">
-                {pos.is_current && <Badge variant="default" className="text-xs">Current</Badge>}
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {resolvedFeaturedId === pos.id && (
+                  <Badge variant="default" className="text-xs gap-1">
+                    <Star className="h-3 w-3 fill-current" />
+                    Shown on profile
+                  </Badge>
+                )}
+                {pos.is_current && <Badge variant="secondary" className="text-xs">Current</Badge>}
                 {pos.industries && <Badge variant="secondary" className="text-xs">{pos.industries.name}</Badge>}
                 <span className="text-xs text-muted-foreground">
                   {pos.start_year ?? '?'} — {pos.is_current ? 'Present' : (pos.end_year ?? '?')}
@@ -261,6 +289,18 @@ export function PositionsSection({ positions, companies, industries }: Props) {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {canChooseDisplay && resolvedFeaturedId !== pos.id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8"
+                  onClick={() => handleSetFeatured(pos.id)}
+                  disabled={isPending}
+                >
+                  Show on profile
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"

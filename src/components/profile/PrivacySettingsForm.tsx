@@ -46,7 +46,6 @@ export function PrivacySettingsForm({ visibilityScope, privacySettings }: Props)
 
           {[
             { name: 'showContactTo', label: 'Contact info visible to', default: privacySettings.show_contact_to },
-            { name: 'showPositionsTo', label: 'Work experience visible to', default: privacySettings.show_positions_to },
             { name: 'showBioTo', label: 'Bio visible to', default: privacySettings.show_bio_to },
           ].map(({ name, label, default: defaultVal }) => (
             <div key={name} className="space-y-1">
@@ -63,6 +62,11 @@ export function PrivacySettingsForm({ visibilityScope, privacySettings }: Props)
               </select>
             </div>
           ))}
+
+          <p className="text-sm text-muted-foreground rounded-md border bg-muted/30 px-3 py-2">
+            Work experience is always visible to brothers in your fraternity so members can find you
+            by company and industry.
+          </p>
 
           <Button type="submit">Save privacy settings</Button>
         </form>

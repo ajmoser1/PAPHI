@@ -63,7 +63,7 @@ export function AppShell({
         </div>
         {isPending && (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 text-sm text-amber-900">
-            Your account is pending approval. Complete your profile below — you can browse members but
+            Your account is pending approval. Complete your profile below. You can browse members but
             can&apos;t message until approved.
           </div>
         )}

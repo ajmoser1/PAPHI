@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import * as z from 'zod'
 import { requireChapterAdmin } from '@/lib/auth'
 import { requireAuth } from '@/lib/auth'
-import { ROLES } from '@/lib/constants'
+import { DEFAULT_PRIVACY_SETTINGS, ROLES } from '@/lib/constants'
 
 const brandingSchema = z.object({
   displayTitle: z.string().min(1),
@@ -67,7 +67,6 @@ export async function setSearchScope(scope: 'fraternity' | 'chapter') {
 const privacySchema = z.object({
   visibilityScope: z.enum(['chapter', 'fraternity', 'hidden']),
   showContactTo: z.enum(['chapter', 'fraternity', 'hidden']),
-  showPositionsTo: z.enum(['chapter', 'fraternity', 'hidden']),
   showBioTo: z.enum(['chapter', 'fraternity', 'hidden']),
 })
 
@@ -77,7 +76,6 @@ export async function updatePrivacySettings(formData: FormData) {
   const validated = privacySchema.safeParse({
     visibilityScope: formData.get('visibilityScope'),
     showContactTo: formData.get('showContactTo'),
-    showPositionsTo: formData.get('showPositionsTo'),
     showBioTo: formData.get('showBioTo'),
   })
 
@@ -87,7 +85,7 @@ export async function updatePrivacySettings(formData: FormData) {
     visibility_scope: validated.data.visibilityScope,
     privacy_settings: {
       show_contact_to: validated.data.showContactTo,
-      show_positions_to: validated.data.showPositionsTo,
+      show_positions_to: DEFAULT_PRIVACY_SETTINGS.show_positions_to,
       show_bio_to: validated.data.showBioTo,
     },
   }

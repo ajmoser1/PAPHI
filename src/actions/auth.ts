@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { DEFAULT_PRIVACY_SETTINGS } from '@/lib/constants'
 import { getSiteOrigin } from '@/lib/site'
 
 function formatAuthErrorMessage(message: string): string {
@@ -194,6 +195,7 @@ export async function register(prevState: AuthState, formData: FormData): Promis
         role,
         status: 'pending_approval',
         chapter_id: resolvedChapterId,
+        privacy_settings: DEFAULT_PRIVACY_SETTINGS,
       },
       { onConflict: 'id' }
     )

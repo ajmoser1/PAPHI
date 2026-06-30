@@ -62,11 +62,18 @@ export default async function ProfileEditPage() {
 
       <Separator />
       <div>
-        <h2 className="text-lg font-semibold mb-4">Work Experience</h2>
+        <h2 className="text-lg font-semibold mb-1">Work Experience</h2>
+        {positions && positions.length > 1 && (
+          <p className="text-sm text-muted-foreground mb-4">
+            Choose which job appears on your profile and in member search results.
+          </p>
+        )}
+        {(!positions || positions.length <= 1) && <div className="mb-4" />}
         <PositionsSection
           positions={positions ?? []}
           companies={companies ?? []}
           industries={industries ?? []}
+          featuredPositionId={profile.featured_position_id}
         />
       </div>
       <Separator />

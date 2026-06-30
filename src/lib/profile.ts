@@ -14,7 +14,7 @@ const APP_PROFILE_SELECT =
   'first_name, last_name, role, status, chapter_id, search_scope' as const
 
 const PROFILE_EDIT_SELECT =
-  'id, first_name, last_name, role, status, chapter_id, avatar_url, bio, graduation_year, chapter, linkedin_url, visibility_scope, privacy_settings, search_scope' as const
+  'id, first_name, last_name, role, status, chapter_id, avatar_url, bio, graduation_year, chapter, linkedin_url, visibility_scope, privacy_settings, search_scope, featured_position_id' as const
 
 async function getAuthenticatedUserId(): Promise<string | null> {
   const supabase = await createClient()
@@ -80,6 +80,7 @@ export type ProfileEditRow = {
   visibility_scope: string | null
   privacy_settings: Record<string, string> | null
   search_scope: string | null
+  featured_position_id: string | null
 }
 
 export async function getOwnProfileRow(): Promise<ProfileEditRow | null> {
@@ -97,5 +98,6 @@ export async function getOwnProfileRow(): Promise<ProfileEditRow | null> {
     visibility_scope: 'fraternity',
     privacy_settings: null,
     search_scope: SEARCH_SCOPE.FRATERNITY,
+    featured_position_id: null,
   }
 }

@@ -28,12 +28,11 @@ export function canViewBio(
 }
 
 export function canViewPositions(
-  privacySettings: PrivacySettings | null,
-  viewerChapterId: string | null,
-  targetChapterId: string | null
+  _privacySettings: PrivacySettings | null,
+  _viewerChapterId: string | null,
+  _targetChapterId: string | null
 ): boolean {
-  const sameChapter = !!viewerChapterId && viewerChapterId === targetChapterId
-  return canViewField(privacySettings?.show_positions_to, viewerChapterId, targetChapterId, sameChapter)
+  return true
 }
 
 export function canViewContact(

@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Mail, Phone, ExternalLink, Building2, Calendar, MessageSquare } from 'lucide-react'
 import { createConversation } from '@/actions/messaging'
 import { canViewBio, canViewContact, canViewPositions } from '@/lib/privacy'
+import { pickDisplayPosition } from '@/lib/positions'
 import { cn } from '@/lib/utils'
 
 export default async function MemberProfilePage({
@@ -35,7 +36,7 @@ export default async function MemberProfilePage({
       supabase
         .from('profiles')
         .select(
-          'id, first_name, last_name, avatar_url, bio, graduation_year, chapter, chapter_id, role, status, privacy_settings'
+          'id, first_name, last_name, avatar_url, bio, graduation_year, chapter, chapter_id, role, status, privacy_settings, featured_position_id'
         )
         .eq('id', id)
         .single(),
@@ -84,7 +85,10 @@ export default async function MemberProfilePage({
   const isAlumni = profile.role === 'alumni'
   const isAdmin = profile.role === 'admin' || profile.role === 'chapter_admin'
   const initials = `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-  const currentPosition = positions?.find((p) => p.is_current)
+  const displayPosition = pickDisplayPosition(
+    (positions ?? []) as Parameters<typeof pickDisplayPosition>[0],
+    profile.featured_position_id
+  )
   const isOwnProfile = user.id === id
 
   async function startConversation() {
@@ -121,10 +125,10 @@ export default async function MemberProfilePage({
                 {isAlumni ? 'Alumni' : isAdmin ? 'Admin' : 'Undergrad'}
               </Badge>
             </div>
-            {showPositions && currentPosition && (
+            {showPositions && displayPosition && (
               <p className="text-muted-foreground">
-                {currentPosition.title} at{' '}
-                {(currentPosition as { companies?: { name?: string } }).companies?.name}
+                {displayPosition.title} at{' '}
+                {(displayPosition as { companies?: { name?: string } }).companies?.name}
               </p>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
@@ -172,7 +176,15 @@ export default async function MemberProfilePage({
           </h2>
           <div className="space-y-3">
             {positions.map((pos) => (
-              <div key={pos.id} className="rounded-lg border bg-white p-4">
+              <div
+                key={pos.id}
+                className={cn(
+                  'rounded-lg border bg-white p-4',
+                  pos.id === displayPosition?.id &&
+                    (positions?.length ?? 0) > 1 &&
+                    'border-primary/50 ring-1 ring-primary/20'
+                )}
+              >
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium text-sm">{pos.title}</p>
@@ -183,8 +195,11 @@ export default async function MemberProfilePage({
                       {pos.start_year ?? '?'} — {pos.is_current ? 'Present' : (pos.end_year ?? '?')}
                     </p>
                   </div>
-                  <div className="flex gap-1">
-                    {pos.is_current && <Badge>Current</Badge>}
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {pos.id === displayPosition?.id && (positions?.length ?? 0) > 1 && (
+                      <Badge variant="default">Shown on profile</Badge>
+                    )}
+                    {pos.is_current && <Badge variant="secondary">Current</Badge>}
                     {(pos as { industries?: { name?: string } }).industries?.name && (
                       <Badge variant="secondary">
                         {(pos as { industries?: { name?: string } }).industries?.name}
