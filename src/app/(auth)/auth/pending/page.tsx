@@ -1,19 +1,45 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { logout } from '@/actions/auth'
 
-export default function PendingPage() {
+export default async function PendingPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.status === 'pending_approval') {
+      redirect('/profile/edit')
+    }
+
+    if (profile?.status === 'active') {
+      redirect('/members')
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
           <span className="text-2xl">⏳</span>
         </div>
-        <CardTitle>Account pending approval</CardTitle>
+        <CardTitle>Finishing account setup</CardTitle>
         <CardDescription>
-          Your account is being reviewed by an admin. You&apos;ll receive access
-          once approved — this typically takes less than 24 hours.
+          Your account is almost ready. If this page doesn&apos;t redirect automatically,{' '}
+          <Link href="/profile/edit" className="underline underline-offset-4 hover:text-primary">
+            continue to your profile
+          </Link>
+          .
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

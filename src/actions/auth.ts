@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getSiteOrigin } from '@/lib/site'
 
 function formatAuthErrorMessage(message: string): string {
   const normalized = message.toLowerCase()
@@ -47,8 +48,6 @@ const resetPasswordSchema = z
     message: 'Passwords do not match.',
     path: ['confirmPassword'],
   })
-
-import { getSiteOrigin } from '@/lib/site'
 
 export type AuthState = {
   errors?: Record<string, string[]>
@@ -98,10 +97,22 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword(validated.data)
+  const { data: authData, error } = await supabase.auth.signInWithPassword(validated.data)
 
   if (error) {
     return { message: formatAuthErrorMessage(error.message) }
+  }
+
+  if (authData.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('status')
+      .eq('id', authData.user.id)
+      .single()
+
+    if (profile?.status === 'pending_approval') {
+      redirect('/profile/edit')
+    }
   }
 
   redirect('/members')
@@ -142,16 +153,30 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     return { message: formatAuthErrorMessage(error.message) }
   }
 
+  if (!signUpData.session) {
+    return {
+      message:
+        'Check your email to confirm your account, then sign in to complete your profile.',
+    }
+  }
+
   if (signUpData.user) {
     const adminClient = createAdminClient()
-    await adminClient
-      .from('profiles')
-      .update({
-        chapter_id: resolvedChapterId,
-        status: 'pending_approval',
+    const { error: profileError } = await adminClient.from('profiles').upsert(
+      {
+        id: signUpData.user.id,
+        first_name: firstName,
+        last_name: lastName,
         role,
-      })
-      .eq('id', signUpData.user.id)
+        status: 'pending_approval',
+        chapter_id: resolvedChapterId,
+      },
+      { onConflict: 'id' }
+    )
+
+    if (profileError) {
+      return { message: 'Account created but profile setup failed. Please contact support.' }
+    }
   }
 
   redirect('/profile/edit')

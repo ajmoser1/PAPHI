@@ -71,14 +71,20 @@ export async function proxy(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // If profile hasn't been created yet, keep user on pending screen.
+    // Profile not created yet (trigger race) — send to setup, not old approval wall
     if (!profile && !isPendingRoute && !isApiRoute) {
       const url = request.nextUrl.clone()
-      url.pathname = '/auth/pending'
+      url.pathname = '/profile/edit'
       return NextResponse.redirect(url)
     }
 
     if (profile) {
+      if (profile.status === 'pending_approval' && isPendingRoute) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/profile/edit'
+        return NextResponse.redirect(url)
+      }
+
       if (profile.status === 'suspended' && !isPendingRoute && !isApiRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/pending'

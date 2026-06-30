@@ -40,7 +40,7 @@ export default async function ProfileEditPage() {
       .order('name'),
   ])
 
-  if (!profile) redirect('/dashboard')
+  if (!profile) redirect('/auth/pending')
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
