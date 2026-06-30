@@ -4,6 +4,7 @@ import { ProfileEditForm } from '@/components/profile/ProfileEditForm'
 import { ContactForm } from '@/components/profile/ContactForm'
 import { PositionsSection } from '@/components/profile/PositionsSection'
 import { AvatarUpload } from '@/components/profile/AvatarUpload'
+import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm'
 import { Separator } from '@/components/ui/separator'
 
 export default async function ProfileEditPage() {
@@ -68,6 +69,12 @@ export default async function ProfileEditPage() {
         <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
         <ContactForm contact={contact} />
       </div>
+
+      <Separator />
+      <PrivacySettingsForm
+        visibilityScope={profile.visibility_scope ?? 'fraternity'}
+        privacySettings={(profile.privacy_settings as Record<string, string>) ?? {}}
+      />
     </div>
   )
 }

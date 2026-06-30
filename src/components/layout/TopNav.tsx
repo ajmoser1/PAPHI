@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button'
 interface TopNavProps {
   firstName: string
   role: string
+  status: string
+  brandTitle?: string
   mobileOpen: boolean
   onToggle: () => void
   unreadCount?: number
 }
 
-export function TopNav({ firstName, mobileOpen, onToggle }: TopNavProps) {
+export function TopNav({ brandTitle = 'PA PHI', mobileOpen, onToggle }: TopNavProps) {
   return (
     <header className="lg:hidden sticky top-0 z-40 bg-sidebar flex items-center gap-3 px-4 py-3">
       <Button
@@ -26,7 +28,7 @@ export function TopNav({ firstName, mobileOpen, onToggle }: TopNavProps) {
         className="text-xl text-[var(--gold)]"
         style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.0em' }}
       >
-        PA PHI
+        {brandTitle.length > 16 ? brandTitle.split(' ').slice(-2).join(' ') : brandTitle}
       </span>
     </header>
   )

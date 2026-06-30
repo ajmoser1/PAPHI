@@ -1,8 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isAdminRole } from '@/lib/constants'
+import { getChapterSlugFromHost } from '@/lib/tenant'
+
+const CHAPTER_SLUG_COOKIE = 'chapter_slug'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
+
+  const hostSlug = getChapterSlugFromHost(request.headers.get('host') ?? '')
+  if (hostSlug) {
+    supabaseResponse.cookies.set(CHAPTER_SLUG_COOKIE, hostSlug, {
+      path: '/',
+      sameSite: 'lax',
+    })
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,12 +47,15 @@ export async function proxy(request: NextRequest) {
   const isPasswordRecoveryRoute =
     pathname === '/auth/forgot-password' || pathname === '/auth/reset-password'
   const isApiRoute = pathname.startsWith('/api/')
+  const isFounderRoute = pathname.startsWith('/founder')
+  const isMessagesRoute = pathname.startsWith('/messages')
 
   // Public routes — no auth needed
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/auth/')
+    pathname.startsWith('/api/auth/') ||
+    pathname === '/start-chapter'
 
   // Redirect unauthenticated users trying to access protected routes
   if (!user && !isPublicRoute) {
@@ -50,7 +65,6 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user) {
-    // Fetch profile to check status and role
     const { data: profile } = await supabase
       .from('profiles')
       .select('role, status')
@@ -65,14 +79,20 @@ export async function proxy(request: NextRequest) {
     }
 
     if (profile) {
-      // If pending approval, only allow the pending page
-      if (profile.status === 'pending_approval' && !isPendingRoute && !isApiRoute) {
+      if (profile.status === 'suspended' && !isPendingRoute && !isApiRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/pending'
         return NextResponse.redirect(url)
       }
 
-      // If active and on auth pages, redirect to search (except password recovery)
+      // Ghost users: allow app routes but block messaging
+      if (profile.status === 'pending_approval' && isMessagesRoute) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/members'
+        return NextResponse.redirect(url)
+      }
+
+      // Active users on auth pages redirect to app (except password recovery)
       if (
         profile.status === 'active' &&
         (isPendingRoute || (isAuthRoute && !isPasswordRecoveryRoute))
@@ -82,11 +102,27 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // Admin-only routes
+      // Pending users on auth pages (except recovery) go to profile setup
       if (
-        pathname.startsWith('/admin') &&
-        profile.role !== 'admin'
+        profile.status === 'pending_approval' &&
+        isAuthRoute &&
+        !isPasswordRecoveryRoute &&
+        pathname !== '/auth/pending'
       ) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/profile/edit'
+        return NextResponse.redirect(url)
+      }
+
+      // Admin routes
+      if (pathname.startsWith('/admin') && !isAdminRole(profile.role)) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/members'
+        return NextResponse.redirect(url)
+      }
+
+      // Founder routes
+      if (isFounderRoute && profile.role !== 'founder') {
         const url = request.nextUrl.clone()
         url.pathname = '/members'
         return NextResponse.redirect(url)

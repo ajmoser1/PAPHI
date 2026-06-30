@@ -1,74 +1,82 @@
-import Link from "next/link";
-import Image from "next/image";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import Link from 'next/link'
+import Image from 'next/image'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { getTenantContext } from '@/lib/tenant'
+import { TenantTheme } from '@/components/layout/TenantTheme'
 
-export default function Home() {
-  return (
-    <div className="relative isolate min-h-screen min-h-[100dvh] overflow-x-hidden bg-gradient-to-b from-background via-background to-muted/30">
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center overflow-hidden"
-        aria-hidden="true"
-      >
-        <Image
-          src="/images/logos/sae-crest-bg.png"
-          alt=""
-          width={1400}
-          height={1400}
-          className="max-h-none w-[min(100vw,42rem)] h-auto max-w-[100vw] scale-[0.65] object-contain opacity-[0.22] blur-sm sm:scale-100 sm:opacity-[0.4] sm:w-[46rem] sm:max-w-none"
-          priority
-          sizes="100vw"
-        />
+export default async function Home() {
+  const tenant = await getTenantContext()
+
+  if (tenant.isApex || !tenant.chapter) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
+        <main className="mx-auto flex max-w-4xl flex-col items-center gap-10 px-6 py-20 text-center">
+          <h1 className="text-4xl sm:text-5xl font-bold text-primary tracking-tight">
+            Chapter Network
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl">
+            The referral and networking platform for fraternity chapters. Find brothers by industry,
+            get warm introductions, and land opportunities through your network.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/start-chapter" className={cn(buttonVariants({ size: 'lg' }))}>
+              Start a chapter
+            </Link>
+            <Link href="/auth/login" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}>
+              Sign in
+            </Link>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Free for all SAE chapters nationwide.
+          </p>
+        </main>
       </div>
-      {/* Hero */}
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16 md:py-20">
-        <section className="flex w-full max-w-4xl flex-col items-center gap-8 text-center sm:gap-10">
-          <div className="flex flex-col items-center space-y-6">
-            
-            <h1 className="max-w-3xl text-3xl text-purple-900 font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Sigma Alpha Epsilon PA PHI
+    )
+  }
+
+  const chapter = tenant.chapter
+  const title = chapter.display_title ?? chapter.name
+  const tagline = chapter.tagline ?? 'Find brothers for referrals, mentorship, and opportunities.'
+
+  return (
+    <>
+      <TenantTheme primaryColor={chapter.primary_color} accentColor={chapter.accent_color} />
+      <div className="relative isolate min-h-screen min-h-[100dvh] overflow-x-hidden bg-gradient-to-b from-background via-background to-muted/30">
+        {chapter.crest_url && (
+          <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center overflow-hidden" aria-hidden>
+            <Image
+              src={chapter.crest_url}
+              alt=""
+              width={1400}
+              height={1400}
+              className="max-h-none w-[min(100vw,42rem)] opacity-[0.22] blur-sm"
+              priority
+            />
+          </div>
+        )}
+        <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-16">
+          <section className="flex w-full max-w-4xl flex-col items-center gap-8 text-center">
+            <h1 className="max-w-3xl text-3xl text-primary font-bold tracking-tight sm:text-5xl">
+              {title}
             </h1>
-            <p className="max-w-2xl text-lg text-foreground sm:text-xl">
-              Find brothers by role or industry for referrals, mentorship, and opportunities.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3 pt-1">
-              <Link href="/auth/register" className={cn(buttonVariants({ size: "lg" }))}>
+            <p className="max-w-2xl text-lg text-foreground sm:text-xl">{tagline}</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href="/auth/register" className={cn(buttonVariants({ size: 'lg' }))}>
                 Get started
               </Link>
-              <Link href="/auth/login" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+              <Link href="/auth/login" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}>
                 Sign in
               </Link>
             </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center">
-            <p className="text-xs font-medium uppercase tracking-wide text-foreground">
-              Built for SAE at Carnegie Mellon
-            </p>
-            <div className="mt-4 flex w-full max-w-sm flex-col items-center justify-center gap-5 sm:max-w-none sm:flex-row sm:gap-6 md:gap-8">
-              <Image
-                src="/images/logos/sae-greek-logo.svg"
-                alt="Sigma Alpha Epsilon fraternity logo"
-                width={160}
-                height={160}
-                className="h-24 w-24 shrink-0 object-contain sm:h-32 sm:w-32 sm:-translate-y-11"
-                priority
-                sizes="(max-width: 640px) 96px, 128px"
-              />
-              <Image
-                src="/images/logos/cmu-wordmark.svg"
-                alt="Carnegie Mellon University wordmark"
-                width={260}
-                height={46}
-                className="h-9 w-auto max-w-[min(100%,260px)] object-contain sm:h-11 sm:-translate-y-10"
-                priority
-                sizes="(max-width: 640px) 200px, 260px"
-              />
-            </div>
-          </div>
+            {chapter.school_name && (
+              <p className="text-xs font-medium uppercase tracking-wide text-foreground">
+                {chapter.school_name}
+              </p>
+            )}
           </section>
         </main>
-      
-    </div>
-  );
+      </div>
+    </>
+  )
 }

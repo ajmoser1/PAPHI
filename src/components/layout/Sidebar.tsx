@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, MessageSquare, User, Shield, LogOut } from 'lucide-react'
+import { Users, MessageSquare, User, Shield, LogOut, Crown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/actions/auth'
+import { isAdminRole, isGhost } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -15,36 +16,54 @@ interface NavItem {
 
 interface SidebarProps {
   role: string
+  status: string
+  brandTitle?: string
+  showFounderLink?: boolean
   unreadCount?: number
   onNavClick?: () => void
 }
 
-export function Sidebar({ role, unreadCount = 0, onNavClick }: SidebarProps) {
+export function Sidebar({
+  role,
+  status,
+  brandTitle = 'PA PHI',
+  showFounderLink = false,
+  unreadCount = 0,
+  onNavClick,
+}: SidebarProps) {
   const pathname = usePathname()
+  const ghost = isGhost(status)
 
   const navItems: NavItem[] = [
     { href: '/members', label: 'Find a Brother', icon: <Users className="h-4 w-4" /> },
-    { href: '/messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> },
+    ...(!ghost
+      ? [{ href: '/messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> }]
+      : []),
     { href: '/profile/edit', label: 'Profile', icon: <User className="h-4 w-4" /> },
   ]
 
-  if (role === 'admin') {
+  if (isAdminRole(role)) {
     navItems.push({ href: '/admin', label: 'Admin', icon: <Shield className="h-4 w-4" /> })
   }
 
+  if (showFounderLink) {
+    navItems.push({ href: '/founder', label: 'Founder', icon: <Crown className="h-4 w-4" /> })
+  }
+
+  const shortTitle = brandTitle.length > 12 ? brandTitle.split(' ').slice(-2).join(' ') : brandTitle
+
   return (
     <aside className="flex flex-col w-60 bg-sidebar h-full p-4 gap-1">
-      {/* Brand */}
       <div className="px-3 pt-2 pb-5">
         <span
-          className="text-3xl text-[var(--gold)] tracking-widest uppercase"
-          style={{ fontFamily: 'var(--font-heading)', letterSpacing: '0.0em' }}
+          className="text-xl text-[var(--gold)] tracking-wide uppercase line-clamp-2"
+          style={{ fontFamily: 'var(--font-heading)' }}
+          title={brandTitle}
         >
-          PA PHI
+          {shortTitle}
         </span>
       </div>
 
-      {/* Nav items */}
       {navItems.map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
         return (
@@ -70,7 +89,6 @@ export function Sidebar({ role, unreadCount = 0, onNavClick }: SidebarProps) {
         )
       })}
 
-      {/* Sign out */}
       <div className="mt-auto">
         <form action={logout}>
           <Button

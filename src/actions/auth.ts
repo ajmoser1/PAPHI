@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import * as z from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 function formatAuthErrorMessage(message: string): string {
   const normalized = message.toLowerCase()
@@ -30,6 +30,8 @@ const registerSchema = z.object({
   email: z.email({ error: 'Please enter a valid email.' }),
   password: z.string().min(8, { error: 'Password must be at least 8 characters.' }),
   role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
+  inviteToken: z.string().optional(),
+  chapterId: z.string().optional(),
 })
 
 const forgotPasswordSchema = z.object({
@@ -54,6 +56,38 @@ export type AuthState = {
   errors?: Record<string, string[]>
   message?: string
 } | undefined
+
+async function resolveChapterId(inviteToken?: string, chapterId?: string): Promise<string | null> {
+  const adminClient = createAdminClient()
+
+  if (inviteToken) {
+    const { data: chapter } = await adminClient
+      .from('chapters')
+      .select('id')
+      .eq('invite_token', inviteToken)
+      .eq('status', 'active')
+      .single()
+    return chapter?.id ?? null
+  }
+
+  if (chapterId) {
+    const { data: chapter } = await adminClient
+      .from('chapters')
+      .select('id')
+      .eq('id', chapterId)
+      .eq('status', 'active')
+      .single()
+    return chapter?.id ?? null
+  }
+
+  // Default to CMU PA PHI for backwards compatibility
+  const { data: defaultChapter } = await adminClient
+    .from('chapters')
+    .select('id')
+    .eq('slug', 'cmu-paphi')
+    .single()
+  return defaultChapter?.id ?? null
+}
 
 export async function login(prevState: AuthState, formData: FormData): Promise<AuthState> {
   const validated = loginSchema.safeParse({
@@ -82,16 +116,23 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     email: formData.get('email'),
     password: formData.get('password'),
     role: formData.get('role'),
+    inviteToken: (formData.get('inviteToken') as string) || undefined,
+    chapterId: (formData.get('chapterId') as string) || undefined,
   })
 
   if (!validated.success) {
     return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const { firstName, lastName, email, password, role } = validated.data
+  const { firstName, lastName, email, password, role, inviteToken, chapterId } = validated.data
+
+  const resolvedChapterId = await resolveChapterId(inviteToken, chapterId)
+  if (!resolvedChapterId) {
+    return { message: 'Invalid invite link or chapter. Please contact your chapter admin.' }
+  }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -103,7 +144,19 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     return { message: formatAuthErrorMessage(error.message) }
   }
 
-  redirect('/auth/pending')
+  if (signUpData.user) {
+    const adminClient = createAdminClient()
+    await adminClient
+      .from('profiles')
+      .update({
+        chapter_id: resolvedChapterId,
+        status: 'pending_approval',
+        role,
+      })
+      .eq('id', signUpData.user.id)
+  }
+
+  redirect('/profile/edit')
 }
 
 export async function requestPasswordReset(

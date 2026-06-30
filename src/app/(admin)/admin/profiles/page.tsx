@@ -1,17 +1,35 @@
+import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { removeAcceptedProfile } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { ROLES } from '@/lib/constants'
 
 export default async function ActiveProfilesPage() {
   const supabase = await createClient()
-  const { data: profiles } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { data: adminProfile } = user
+    ? await supabase.from('profiles').select('role, chapter_id').eq('id', user.id).single()
+    : { data: null }
+
+  const adminClient = createAdminClient()
+
+  let query = adminClient
     .from('profiles')
     .select('id, first_name, last_name, role, status, created_at')
     .eq('status', 'active')
-    .neq('role', 'admin')
+    .not('role', 'in', `(${ROLES.FOUNDER},${ROLES.CHAPTER_ADMIN},${ROLES.ADMIN})`)
     .order('created_at', { ascending: false })
+
+  if (adminProfile?.role !== ROLES.FOUNDER && adminProfile?.chapter_id) {
+    query = query.eq('chapter_id', adminProfile.chapter_id)
+  }
+
+  const { data: profiles } = await query
 
   return (
     <div className="space-y-6">
@@ -26,7 +44,7 @@ export default async function ActiveProfilesPage() {
         <p className="text-muted-foreground">No active profiles found.</p>
       ) : (
         <div className="space-y-3">
-          {profiles.map((profile) => (
+          {(profiles as { id: string; first_name: string; last_name: string; role: string; created_at: string }[]).map((profile) => (
             <Card key={profile.id}>
               <CardContent className="flex items-center justify-between py-4">
                 <div>

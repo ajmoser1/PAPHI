@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/actions/auth'
 import { Button } from '@/components/ui/button'
+import { isAdminRole } from '@/lib/constants'
 
 export default async function AdminLayout({
   children,
@@ -19,7 +20,7 @@ export default async function AdminLayout({
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'admin') redirect('/dashboard')
+  if (!profile || !isAdminRole(profile.role)) redirect('/members')
 
   return (
     <div className="flex min-h-screen bg-zinc-50">
@@ -30,10 +31,11 @@ export default async function AdminLayout({
         </div>
         {[
           { href: '/admin/approvals', label: 'Approvals' },
+          { href: '/admin/customize', label: 'Customize' },
           { href: '/admin/profiles', label: 'Profiles' },
           { href: '/admin/companies', label: 'Companies' },
           { href: '/admin/industries', label: 'Industries' },
-          { href: '/dashboard', label: '← Back to app' },
+          { href: '/members', label: '← Back to app' },
         ].map(({ href, label }) => (
           <Link
             key={href}

@@ -1,24 +1,51 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
-async function requireAuth() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return { supabase, userId: user.id }
+async function requireActive() {
+  const { supabase, userId } = await requireActiveProfile()
+  return { supabase, userId }
 }
 
 export async function createConversation(otherUserId: string): Promise<string> {
-  const { supabase, userId } = await requireAuth()
+  const { supabase, userId } = await requireActiveProfile()
 
   if (userId === otherUserId) throw new Error('Cannot message yourself.')
 
-  // Canonical ordering: smaller UUID is participant_a
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, status, chapter_id')
+    .in('id', [userId, otherUserId])
+
+  const self = profiles?.find((p) => p.id === userId)
+  const other = profiles?.find((p) => p.id === otherUserId)
+
+  if (!self || !other || other.status !== 'active') {
+    throw new Error('Cannot message this user.')
+  }
+
+  if (self.chapter_id && other.chapter_id) {
+    const { data: chapters } = await supabase
+      .from('chapters')
+      .select('id, fraternity_id')
+      .in('id', [self.chapter_id, other.chapter_id])
+
+    const selfChapter = chapters?.find((c) => c.id === self.chapter_id)
+    const otherChapter = chapters?.find((c) => c.id === other.chapter_id)
+
+    if (
+      selfChapter &&
+      otherChapter &&
+      selfChapter.fraternity_id !== otherChapter.fraternity_id
+    ) {
+      throw new Error('Cannot message users outside your fraternity.')
+    }
+  }
+
   const [a, b] = [userId, otherUserId].sort()
 
-  // Check if conversation already exists
   const { data: existing } = await supabase
     .from('conversations')
     .select('id')
@@ -28,7 +55,6 @@ export async function createConversation(otherUserId: string): Promise<string> {
 
   if (existing) return existing.id
 
-  // Create new conversation
   const { data: created, error } = await supabase
     .from('conversations')
     .insert({ participant_a: a, participant_b: b })
@@ -40,7 +66,7 @@ export async function createConversation(otherUserId: string): Promise<string> {
 }
 
 export async function sendMessage(conversationId: string, body: string): Promise<void> {
-  const { supabase, userId } = await requireAuth()
+  const { supabase, userId } = await requireActiveProfile()
 
   const trimmed = body.trim()
   if (!trimmed) return

@@ -2,34 +2,29 @@
 
 import { revalidatePath } from 'next/cache'
 import * as z from 'zod'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-
-async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-  if (profile?.role !== 'admin') throw new Error('Forbidden')
-  return { supabase, adminClient: createAdminClient(), userId: user.id }
-}
+import { requireChapterAdmin } from '@/lib/auth'
+import { ROLES } from '@/lib/constants'
 
 export async function approveUser(profileId: string) {
-  const { supabase } = await requireAdmin()
-  const { data: profile } = await supabase
+  const { profile, adminClient } = await requireChapterAdmin()
+
+  const { data: target } = await adminClient
     .from('profiles')
-    .select('role')
+    .select('role, chapter_id')
     .eq('id', profileId)
     .single()
 
-  // Activate the profile using service role (bypasses RLS restrictions on status/role)
-  const adminClient = createAdminClient()
+  if (!target) throw new Error('Profile not found.')
+  if (profile.role !== ROLES.FOUNDER && target.chapter_id !== profile.chapter_id) {
+    throw new Error('Cannot approve users outside your chapter.')
+  }
+
   const { error } = await adminClient
     .from('profiles')
-    .update({ status: 'active', role: profile?.role === 'pending' ? 'undergrad' : profile?.role })
+    .update({
+      status: 'active',
+      role: target.role === 'pending' ? 'undergrad' : target.role,
+    })
     .eq('id', profileId)
 
   if (error) throw new Error(error.message)
@@ -38,18 +33,30 @@ export async function approveUser(profileId: string) {
 }
 
 export async function rejectUser(profileId: string) {
-  await requireAdmin()
-  const adminClient = createAdminClient()
+  const { profile, adminClient } = await requireChapterAdmin()
+
+  const { data: target } = await adminClient
+    .from('profiles')
+    .select('chapter_id')
+    .eq('id', profileId)
+    .single()
+
+  if (!target) throw new Error('Profile not found.')
+  if (profile.role !== ROLES.FOUNDER && target.chapter_id !== profile.chapter_id) {
+    throw new Error('Cannot reject users outside your chapter.')
+  }
+
   const { error } = await adminClient
     .from('profiles')
     .update({ status: 'suspended' })
     .eq('id', profileId)
+
   if (error) throw new Error(error.message)
   revalidatePath('/admin/approvals')
 }
 
 export async function removeAcceptedProfile(profileId: string) {
-  const { adminClient, userId } = await requireAdmin()
+  const { profile, adminClient, userId } = await requireChapterAdmin()
 
   if (profileId === userId) {
     throw new Error('You cannot remove your own profile.')
@@ -57,18 +64,20 @@ export async function removeAcceptedProfile(profileId: string) {
 
   const { data: targetProfile } = await adminClient
     .from('profiles')
-    .select('id, status, role')
+    .select('id, status, role, chapter_id')
     .eq('id', profileId)
     .single()
 
-  if (!targetProfile) {
-    throw new Error('Profile not found.')
+  if (!targetProfile) throw new Error('Profile not found.')
+  if (
+    profile.role !== ROLES.FOUNDER &&
+    targetProfile.chapter_id !== profile.chapter_id
+  ) {
+    throw new Error('Cannot remove users outside your chapter.')
   }
-
-  if (targetProfile.role === 'admin') {
-    throw new Error('Cannot remove another admin profile.')
+  if (targetProfile.role === ROLES.CHAPTER_ADMIN || targetProfile.role === ROLES.FOUNDER) {
+    throw new Error('Cannot remove an admin profile.')
   }
-
   if (targetProfile.status !== 'active') {
     throw new Error('Only accepted profiles can be removed.')
   }
@@ -91,7 +100,7 @@ const companySchema = z.object({
 })
 
 export async function createCompany(formData: FormData): Promise<void> {
-  await requireAdmin()
+  const { adminClient } = await requireChapterAdmin()
   const validated = companySchema.safeParse({
     name: formData.get('name'),
     slug: formData.get('slug'),
@@ -99,7 +108,6 @@ export async function createCompany(formData: FormData): Promise<void> {
     website: formData.get('website') || undefined,
   })
   if (!validated.success) return
-  const adminClient = createAdminClient()
   await adminClient.from('companies').insert({
     name: validated.data.name,
     slug: validated.data.slug,
@@ -111,11 +119,37 @@ export async function createCompany(formData: FormData): Promise<void> {
 }
 
 export async function createIndustry(formData: FormData): Promise<void> {
-  await requireAdmin()
+  const { adminClient } = await requireChapterAdmin()
   const name = (formData.get('name') as string)?.trim()
   if (!name) return
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-  const adminClient = createAdminClient()
   await adminClient.from('industries').insert({ name, slug })
   revalidatePath('/admin/industries')
+}
+
+export async function promoteToChapterAdmin(profileId: string) {
+  const { profile, adminClient, userId } = await requireChapterAdmin()
+
+  if (profileId === userId) throw new Error('You are already an admin.')
+
+  const { data: target } = await adminClient
+    .from('profiles')
+    .select('chapter_id, status')
+    .eq('id', profileId)
+    .single()
+
+  if (!target || target.chapter_id !== profile.chapter_id) {
+    throw new Error('User is not in your chapter.')
+  }
+  if (target.status !== 'active') {
+    throw new Error('Only active members can be promoted.')
+  }
+
+  const { error } = await adminClient
+    .from('profiles')
+    .update({ role: ROLES.CHAPTER_ADMIN })
+    .eq('id', profileId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath('/admin/profiles')
 }

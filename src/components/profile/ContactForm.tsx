@@ -43,6 +43,7 @@ export function ContactForm({ contact }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Choose what contact information is visible to other members.
+        Adding your phone helps admins verify your identity while your account is pending approval.
       </p>
 
       {[

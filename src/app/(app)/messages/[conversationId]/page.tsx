@@ -13,6 +13,14 @@ export default async function ConversationPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const { data: viewerProfile } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .single()
+
+  if (viewerProfile?.status === 'pending_approval') redirect('/members')
+
   const { data: conversation } = await supabase
     .from('conversations')
     .select('id, participant_a, participant_b')

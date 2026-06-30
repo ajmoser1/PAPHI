@@ -9,6 +9,14 @@ export default async function MessagesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.status === 'pending_approval') redirect('/members')
+
   const { data: conversations } = await supabase
     .from('conversations')
     .select(`

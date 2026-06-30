@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Mail, Phone, ExternalLink, Building2, Calendar, MessageSquare } from 'lucide-react'
 import { createConversation } from '@/actions/messaging'
+import { canViewBio, canViewContact, canViewPositions } from '@/lib/privacy'
 import { cn } from '@/lib/utils'
 
 export default async function MemberProfilePage({
@@ -21,35 +22,67 @@ export default async function MemberProfilePage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
+  const { data: viewerProfile } = await supabase
+    .from('profiles')
+    .select('status, chapter_id')
+    .eq('id', user.id)
+    .single()
+
+  const viewerIsActive = viewerProfile?.status === 'active'
+  const viewerChapterId = viewerProfile?.chapter_id ?? null
+
   const [{ data: profile }, { data: positions }, { data: contact }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, first_name, last_name, avatar_url, bio, graduation_year, chapter, role, status')
-      .eq('id', id)
-      .single(),
-    supabase
-      .from('positions')
-      .select('id, title, is_current, start_year, end_year, companies(name), industries(name)')
-      .eq('profile_id', id)
-      .order('is_current', { ascending: false })
-      .order('start_year', { ascending: false }),
-    supabase
-      .from('alumni_contact_public')
-      .select('email, phone, linkedin_url, show_email, show_phone, show_linkedin')
-      .eq('profile_id', id)
-      .single(),
-  ])
+      supabase
+        .from('profiles')
+        .select(
+          'id, first_name, last_name, avatar_url, bio, graduation_year, chapter, chapter_id, role, status, privacy_settings'
+        )
+        .eq('id', id)
+        .single(),
+      supabase
+        .from('positions')
+        .select('id, title, is_current, start_year, end_year, companies(name), industries(name)')
+        .eq('profile_id', id)
+        .order('is_current', { ascending: false })
+        .order('start_year', { ascending: false }),
+      supabase
+        .from('alumni_contact_public')
+        .select('email, phone, linkedin_url, show_email, show_phone, show_linkedin')
+        .eq('profile_id', id)
+        .single(),
+    ])
+
+  let targetChapter = null
+  if (profile?.chapter_id) {
+    const { data } = await supabase
+      .from('chapters')
+      .select('name, school_name')
+      .eq('id', profile.chapter_id)
+      .single()
+    targetChapter = data
+  }
 
   if (
     !profile ||
     profile.status !== 'active' ||
-    (profile.role !== 'undergrad' && profile.role !== 'alumni' && profile.role !== 'admin')
+    (profile.role !== 'undergrad' &&
+      profile.role !== 'alumni' &&
+      profile.role !== 'admin' &&
+      profile.role !== 'chapter_admin' &&
+      profile.role !== 'founder')
   ) {
     notFound()
   }
 
+  const privacySettings = (profile.privacy_settings as Record<string, string>) ?? {}
+  const showBio = canViewBio(privacySettings, viewerChapterId, profile.chapter_id)
+  const showPositions = canViewPositions(privacySettings, viewerChapterId, profile.chapter_id)
+  const showContact =
+    viewerIsActive &&
+    canViewContact(privacySettings, viewerChapterId, profile.chapter_id)
+
   const isAlumni = profile.role === 'alumni'
-  const isAdmin = profile.role === 'admin'
+  const isAdmin = profile.role === 'admin' || profile.role === 'chapter_admin'
   const initials = `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
   const currentPosition = positions?.find((p) => p.is_current)
   const isOwnProfile = user.id === id
@@ -88,9 +121,10 @@ export default async function MemberProfilePage({
                 {isAlumni ? 'Alumni' : isAdmin ? 'Admin' : 'Undergrad'}
               </Badge>
             </div>
-            {currentPosition && (
+            {showPositions && currentPosition && (
               <p className="text-muted-foreground">
-                {currentPosition.title} at {(currentPosition as { companies?: { name?: string } }).companies?.name}
+                {currentPosition.title} at{' '}
+                {(currentPosition as { companies?: { name?: string } }).companies?.name}
               </p>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
@@ -99,12 +133,17 @@ export default async function MemberProfilePage({
                   <Calendar className="mr-1 h-3 w-3" /> Class of {profile.graduation_year}
                 </Badge>
               )}
-              {profile.chapter && <Badge variant="secondary">{profile.chapter}</Badge>}
+              {(targetChapter?.name || profile.chapter) && (
+                <Badge variant="secondary">{targetChapter?.name ?? profile.chapter}</Badge>
+              )}
+              {targetChapter?.school_name && (
+                <Badge variant="secondary">{targetChapter.school_name}</Badge>
+              )}
             </div>
           </div>
         </div>
 
-        {!isOwnProfile && (
+        {!isOwnProfile && viewerIsActive && (
           <form action={startConversation} className="block">
             <Button
               type="submit"
@@ -118,7 +157,7 @@ export default async function MemberProfilePage({
         )}
       </div>
 
-      {profile.bio && (
+      {showBio && profile.bio && (
         <Card>
           <CardContent className="pt-4">
             <p className="text-sm leading-relaxed">{profile.bio}</p>
@@ -126,7 +165,7 @@ export default async function MemberProfilePage({
         </Card>
       )}
 
-      {positions && positions.length > 0 && (
+      {showPositions && positions && positions.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
             <Building2 className="h-4 w-4" /> Experience
@@ -159,7 +198,7 @@ export default async function MemberProfilePage({
         </div>
       )}
 
-      {contact && (contact.show_email || contact.show_phone || contact.show_linkedin) && (
+      {showContact && contact && (contact.show_email || contact.show_phone || contact.show_linkedin) && (
         <div>
           <h2 className="text-lg font-semibold mb-3">Contact</h2>
           <div className="space-y-2">
