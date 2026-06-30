@@ -49,6 +49,7 @@ export async function proxy(request: NextRequest) {
   const isApiRoute = pathname.startsWith('/api/')
   const isFounderRoute = pathname.startsWith('/founder')
   const isMessagesRoute = pathname.startsWith('/messages')
+  const isProfileSetupRoute = pathname === '/profile/edit'
 
   // Public routes — no auth needed
   const isPublicRoute =
@@ -72,19 +73,13 @@ export async function proxy(request: NextRequest) {
       .single()
 
     // Profile not created yet (trigger race) — send to setup, not old approval wall
-    if (!profile && !isPendingRoute && !isApiRoute) {
+    if (!profile && !isPendingRoute && !isApiRoute && !isProfileSetupRoute) {
       const url = request.nextUrl.clone()
       url.pathname = '/profile/edit'
       return NextResponse.redirect(url)
     }
 
     if (profile) {
-      if (profile.status === 'pending_approval' && isPendingRoute) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/profile/edit'
-        return NextResponse.redirect(url)
-      }
-
       if (profile.status === 'suspended' && !isPendingRoute && !isApiRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/pending'

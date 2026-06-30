@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getOwnProfileRow } from '@/lib/profile'
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm'
 import { ContactForm } from '@/components/profile/ContactForm'
 import { PositionsSection } from '@/components/profile/PositionsSection'
@@ -12,12 +13,8 @@ export default async function ProfileEditPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const [{ data: profile }, { data: contact }, { data: positions }, { data: companies }, { data: industries }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single(),
+  const [profile, { data: contact }, { data: positions }, { data: companies }, { data: industries }] = await Promise.all([
+    getOwnProfileRow(),
     supabase
       .from('alumni_contact')
       .select('*')
@@ -53,7 +50,15 @@ export default async function ProfileEditPage() {
 
       <Separator />
 
-      <ProfileEditForm profile={profile} />
+      <ProfileEditForm
+        profile={{
+          first_name: profile.first_name ?? '',
+          last_name: profile.last_name ?? '',
+          bio: profile.bio,
+          graduation_year: profile.graduation_year,
+          chapter: profile.chapter,
+        }}
+      />
 
       <Separator />
       <div>
@@ -73,7 +78,7 @@ export default async function ProfileEditPage() {
       <Separator />
       <PrivacySettingsForm
         visibilityScope={profile.visibility_scope ?? 'fraternity'}
-        privacySettings={(profile.privacy_settings as Record<string, string>) ?? {}}
+        privacySettings={profile.privacy_settings ?? {}}
       />
     </div>
   )

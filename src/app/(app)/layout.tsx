@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AppShell } from '@/components/layout/AppShell'
 import { TenantTheme } from '@/components/layout/TenantTheme'
 import { getTenantContext, getBrandingForUser } from '@/lib/tenant'
+import { getOwnProfileForApp } from '@/lib/profile'
 import { ROLES } from '@/lib/constants'
 
 export default async function AppLayout({
@@ -15,11 +16,7 @@ export default async function AppLayout({
 
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('first_name, last_name, role, status, chapter_id, search_scope')
-    .eq('id', user.id)
-    .single()
+  const profile = await getOwnProfileForApp()
 
   if (!profile) redirect('/auth/pending')
   if (profile.status === 'suspended') redirect('/auth/pending')
@@ -43,7 +40,7 @@ export default async function AppLayout({
       <TenantTheme primaryColor={branding.primaryColor} accentColor={branding.accentColor} />
       <AppShell
         role={profile.role}
-        firstName={profile.first_name}
+        firstName={profile.first_name ?? ''}
         status={profile.status}
         brandTitle={branding.title}
         searchScope={profile.search_scope ?? 'fraternity'}

@@ -18,10 +18,6 @@ export default async function PendingPage() {
       .eq('id', user.id)
       .single()
 
-    if (profile?.status === 'pending_approval') {
-      redirect('/profile/edit')
-    }
-
     if (profile?.status === 'active') {
       redirect('/members')
     }
