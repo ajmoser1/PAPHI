@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getMemberProfile, getMemberPositions } from '@/lib/members'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,26 +33,15 @@ export default async function MemberProfilePage({
   const viewerIsActive = viewerProfile?.status === 'active'
   const viewerChapterId = viewerProfile?.chapter_id ?? null
 
-  const [{ data: profile }, { data: positions }, { data: contact }] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select(
-          'id, first_name, last_name, avatar_url, bio, graduation_year, chapter, chapter_id, role, status, privacy_settings, featured_position_id'
-        )
-        .eq('id', id)
-        .single(),
-      supabase
-        .from('positions')
-        .select('id, title, is_current, start_year, end_year, companies(name), industries(name)')
-        .eq('profile_id', id)
-        .order('is_current', { ascending: false })
-        .order('start_year', { ascending: false }),
-      supabase
-        .from('alumni_contact_public')
-        .select('email, phone, linkedin_url, show_email, show_phone, show_linkedin')
-        .eq('profile_id', id)
-        .single(),
-    ])
+  const [{ profile }, positions, { data: contact }] = await Promise.all([
+    getMemberProfile(id).then((data) => ({ profile: data })),
+    getMemberPositions(id),
+    supabase
+      .from('alumni_contact_public')
+      .select('email, phone, linkedin_url, show_email, show_phone, show_linkedin')
+      .eq('profile_id', id)
+      .single(),
+  ])
 
   let targetChapter = null
   if (profile?.chapter_id) {
@@ -84,7 +74,7 @@ export default async function MemberProfilePage({
 
   const isAlumni = profile.role === 'alumni'
   const isAdmin = profile.role === 'admin' || profile.role === 'chapter_admin'
-  const initials = `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+  const initials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase()
   const displayPosition = pickDisplayPosition(
     (positions ?? []) as Parameters<typeof pickDisplayPosition>[0],
     profile.featured_position_id
