@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { SEARCH_SCOPE } from '@/lib/constants'
 
 export type AppShellProfile = {
@@ -10,31 +10,56 @@ export type AppShellProfile = {
   search_scope: string
 }
 
-export async function getOwnProfileForApp(): Promise<AppShellProfile | null> {
+const APP_PROFILE_SELECT =
+  'first_name, last_name, role, status, chapter_id, search_scope' as const
+
+const PROFILE_EDIT_SELECT =
+  'id, first_name, last_name, role, status, chapter_id, avatar_url, bio, graduation_year, chapter, linkedin_url, visibility_scope, privacy_settings, search_scope' as const
+
+async function getAuthenticatedUserId(): Promise<string | null> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return null
+  return user?.id ?? null
+}
 
-  const { data: full } = await supabase
+async function fetchOwnProfileRow<T extends string>(
+  select: T
+): Promise<Record<string, unknown> | null> {
+  const userId = await getAuthenticatedUserId()
+  if (!userId) return null
+
+  const supabase = await createClient()
+  const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, last_name, role, status, chapter_id, search_scope')
-    .eq('id', user.id)
+    .select(select)
+    .eq('id', userId)
     .single()
 
-  if (full) return full
+  if (profile) return profile
 
-  const { data: minimal } = await supabase
+  const { data: adminProfile } = await createAdminClient()
     .from('profiles')
-    .select('first_name, last_name, role, status')
-    .eq('id', user.id)
+    .select(select)
+    .eq('id', userId)
     .single()
 
+  return adminProfile
+}
+
+export async function getOwnProfileForApp(): Promise<AppShellProfile | null> {
+  const row = await fetchOwnProfileRow(APP_PROFILE_SELECT)
+  if (row) return row as AppShellProfile
+
+  const minimal = await fetchOwnProfileRow('first_name, last_name, role, status')
   if (!minimal) return null
 
   return {
-    ...minimal,
+    first_name: (minimal.first_name as string | null) ?? null,
+    last_name: (minimal.last_name as string | null) ?? null,
+    role: minimal.role as string,
+    status: minimal.status as string,
     chapter_id: null,
     search_scope: SEARCH_SCOPE.FRATERNITY,
   }
@@ -58,22 +83,19 @@ export type ProfileEditRow = {
 }
 
 export async function getOwnProfileRow(): Promise<ProfileEditRow | null> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
+  const row = await fetchOwnProfileRow(PROFILE_EDIT_SELECT)
+  if (row) return row as ProfileEditRow
 
-  const { data: full } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  if (full) return full as ProfileEditRow
+  const minimal = await fetchOwnProfileRow(
+    'id, first_name, last_name, role, status, chapter_id, avatar_url, bio, graduation_year, chapter'
+  )
+  if (!minimal) return null
 
-  const { data: minimal } = await supabase
-    .from('profiles')
-    .select(
-      'id, first_name, last_name, role, status, chapter_id, avatar_url, bio, graduation_year, chapter, linkedin_url, visibility_scope, privacy_settings, search_scope'
-    )
-    .eq('id', user.id)
-    .single()
-
-  return (minimal as ProfileEditRow) ?? null
+  return {
+    ...(minimal as ProfileEditRow),
+    linkedin_url: null,
+    visibility_scope: 'fraternity',
+    privacy_settings: null,
+    search_scope: SEARCH_SCOPE.FRATERNITY,
+  }
 }

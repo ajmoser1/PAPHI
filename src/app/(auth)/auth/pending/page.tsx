@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getOwnProfileForApp } from '@/lib/profile'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { logout } from '@/actions/auth'
@@ -12,11 +12,11 @@ export default async function PendingPage() {
   } = await supabase.auth.getUser()
 
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('status')
-      .eq('id', user.id)
-      .single()
+    const profile = await getOwnProfileForApp()
+
+    if (profile?.status === 'pending_approval') {
+      redirect('/profile/edit')
+    }
 
     if (profile?.status === 'active') {
       redirect('/members')
@@ -31,11 +31,8 @@ export default async function PendingPage() {
         </div>
         <CardTitle>Finishing account setup</CardTitle>
         <CardDescription>
-          Your account is almost ready. If this page doesn&apos;t redirect automatically,{' '}
-          <Link href="/profile/edit" className="underline underline-offset-4 hover:text-primary">
-            continue to your profile
-          </Link>
-          .
+          We&apos;re still setting up your account. Please wait a moment and refresh, or sign out
+          and try again.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

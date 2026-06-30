@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import * as z from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 async function requireAuth() {
   const supabase = await createClient()
@@ -34,16 +34,18 @@ export async function updateProfile(_prevState: unknown, formData: FormData) {
     return { errors: validated.error.flatten().fieldErrors }
   }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      first_name: validated.data.firstName,
-      last_name: validated.data.lastName,
-      bio: validated.data.bio || null,
-      graduation_year: validated.data.graduationYear || null,
-      chapter: validated.data.chapter || null,
-    })
-    .eq('id', userId)
+  const updates = {
+    first_name: validated.data.firstName,
+    last_name: validated.data.lastName,
+    bio: validated.data.bio || null,
+    graduation_year: validated.data.graduationYear || null,
+    chapter: validated.data.chapter || null,
+  }
+
+  let { error } = await supabase.from('profiles').update(updates).eq('id', userId)
+  if (error) {
+    ;({ error } = await createAdminClient().from('profiles').update(updates).eq('id', userId))
+  }
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -63,9 +65,12 @@ export async function updateContactInfo(formData: FormData) {
     show_linkedin: formData.get('showLinkedin') === 'true',
   }
 
-  const { error } = await supabase
-    .from('alumni_contact')
-    .upsert(data, { onConflict: 'profile_id' })
+  let { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
+  if (error) {
+    ;({ error } = await createAdminClient()
+      .from('alumni_contact')
+      .upsert(data, { onConflict: 'profile_id' }))
+  }
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -100,10 +105,17 @@ export async function uploadAvatar(formData: FormData) {
 
   const { data } = admin.storage.from('avatars').getPublicUrl(path)
 
-  const { error: updateError } = await supabase
+  let { error: updateError } = await supabase
     .from('profiles')
     .update({ avatar_url: data.publicUrl })
     .eq('id', userId)
+
+  if (updateError) {
+    ;({ error: updateError } = await admin
+      .from('profiles')
+      .update({ avatar_url: data.publicUrl })
+      .eq('id', userId))
+  }
 
   if (updateError) return { message: updateError.message }
   revalidatePath('/profile/edit')
@@ -121,10 +133,10 @@ export async function removeAvatar() {
     await admin.storage.from('avatars').remove(existing.map((f: { name: string }) => `${userId}/${f.name}`))
   }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({ avatar_url: null })
-    .eq('id', userId)
+  let { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', userId)
+  if (error) {
+    ;({ error } = await admin.from('profiles').update({ avatar_url: null }).eq('id', userId))
+  }
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -171,7 +183,7 @@ export async function createPosition(formData: FormData) {
     companyId = created.id
   }
 
-  const { error } = await supabase.from('positions').insert({
+  const position = {
     profile_id: userId,
     company_id: companyId,
     title,
@@ -179,7 +191,12 @@ export async function createPosition(formData: FormData) {
     start_year: startYear,
     end_year: endYear,
     is_current: isCurrent,
-  })
+  }
+
+  let { error } = await supabase.from('positions').insert(position)
+  if (error) {
+    ;({ error } = await admin.from('positions').insert(position))
+  }
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -225,18 +242,28 @@ export async function updatePosition(positionId: string, formData: FormData) {
     companyId = created.id
   }
 
-  const { error } = await supabase
+  const updates = {
+    company_id: companyId,
+    title,
+    industry_id: industryId,
+    start_year: startYear,
+    end_year: endYear,
+    is_current: isCurrent,
+  }
+
+  let { error } = await supabase
     .from('positions')
-    .update({
-      company_id: companyId,
-      title,
-      industry_id: industryId,
-      start_year: startYear,
-      end_year: endYear,
-      is_current: isCurrent,
-    })
+    .update(updates)
     .eq('id', positionId)
     .eq('profile_id', userId)
+
+  if (error) {
+    ;({ error } = await admin
+      .from('positions')
+      .update(updates)
+      .eq('id', positionId)
+      .eq('profile_id', userId))
+  }
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -245,11 +272,21 @@ export async function updatePosition(positionId: string, formData: FormData) {
 
 export async function deletePosition(positionId: string) {
   const { supabase, userId } = await requireAuth()
-  const { error } = await supabase
+  let { error } = await supabase
     .from('positions')
     .delete()
     .eq('id', positionId)
     .eq('profile_id', userId)
+
+  if (error) {
+    const admin = createAdminClient()
+    ;({ error } = await admin
+      .from('positions')
+      .delete()
+      .eq('id', positionId)
+      .eq('profile_id', userId))
+  }
+
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
   return { success: true }

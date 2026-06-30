@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { register } from '@/actions/auth'
+import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,7 +58,8 @@ export function RegisterForm({ chapters = [] }: { chapters?: ChapterOption[] }) 
           </div>
           <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required />
+            <Input id="password" name="password" type="password" required minLength={8} />
+            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
             {state?.errors?.password && (
               <p className="text-xs text-destructive">{state.errors.password[0]}</p>
             )}

@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { resetPassword } from '@/actions/auth'
+import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +26,7 @@ export default function ResetPasswordPage() {
           <div className="space-y-1">
             <Label htmlFor="password">New password</Label>
             <Input id="password" name="password" type="password" required minLength={8} />
+            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
             {state?.errors?.password && (
               <p className="text-xs text-destructive">{state.errors.password[0]}</p>
             )}

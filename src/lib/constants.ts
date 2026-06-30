@@ -71,3 +71,6 @@ export const COMPANY_STATUS = {
   SUGGESTED: 'suggested',
   REJECTED: 'rejected',
 } as const
+
+export const PASSWORD_REQUIREMENTS_HINT =
+  'Must be at least 8 characters and include a number, an uppercase character, and a lowercase character.'

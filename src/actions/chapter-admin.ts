@@ -83,17 +83,20 @@ export async function updatePrivacySettings(formData: FormData) {
 
   if (!validated.success) throw new Error('Invalid privacy settings.')
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      visibility_scope: validated.data.visibilityScope,
-      privacy_settings: {
-        show_contact_to: validated.data.showContactTo,
-        show_positions_to: validated.data.showPositionsTo,
-        show_bio_to: validated.data.showBioTo,
-      },
-    })
-    .eq('id', userId)
+  const updates = {
+    visibility_scope: validated.data.visibilityScope,
+    privacy_settings: {
+      show_contact_to: validated.data.showContactTo,
+      show_positions_to: validated.data.showPositionsTo,
+      show_bio_to: validated.data.showBioTo,
+    },
+  }
+
+  let { error } = await supabase.from('profiles').update(updates).eq('id', userId)
+  if (error) {
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    ;({ error } = await createAdminClient().from('profiles').update(updates).eq('id', userId))
+  }
 
   if (error) throw new Error(error.message)
   revalidatePath('/profile/edit')
