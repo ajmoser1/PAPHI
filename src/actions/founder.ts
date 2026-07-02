@@ -80,8 +80,9 @@ export async function approveChapterRequest(requestId: string) {
       status: 'active',
       display_title: `Sigma Alpha Epsilon ${request.chapter_name}`,
       tagline: 'Find brothers for referrals, mentorship, and opportunities.',
+      contact_email: request.contact_email,
     })
-    .select('id, slug, invite_token')
+    .select('id, slug, invite_token, contact_email')
     .single()
 
   if (chapterError) throw new Error(chapterError.message)

@@ -41,7 +41,7 @@ export default async function FounderPage() {
       .order('created_at', { ascending: true }),
     adminClient
       .from('chapters')
-      .select('id, slug, name, school_name, status, invite_token')
+      .select('id, slug, name, school_name, status, invite_token, contact_email')
       .order('name'),
   ])
 
@@ -59,6 +59,7 @@ export default async function FounderPage() {
     school_name: string | null
     status: string
     invite_token: string
+    contact_email: string | null
   }
 
   const requestList = (requests ?? []) as ChapterRequest[]
@@ -149,8 +150,21 @@ export default async function FounderPage() {
                 <div className="text-xs bg-muted p-2 rounded font-mono break-all">
                   Invite: {inviteRegisterUrl(ch.invite_token)}
                 </div>
+                {ch.contact_email && (
+                  <p className="text-xs text-muted-foreground">
+                    Send this invite link to <strong>{ch.contact_email}</strong> — when they
+                    register with that email they&apos;re automatically made chapter admin.
+                  </p>
+                )}
                 <form action={assignChapterAdminFromForm.bind(null, ch.id)} className="flex gap-2">
-                  <Input name="email" type="email" placeholder="Admin email" required className="max-w-xs" />
+                  <Input
+                    name="email"
+                    type="email"
+                    placeholder="Admin email"
+                    defaultValue={ch.contact_email ?? ''}
+                    required
+                    className="max-w-xs"
+                  />
                   <Button type="submit" size="sm" variant="secondary">Assign admin</Button>
                 </form>
               </CardContent>
