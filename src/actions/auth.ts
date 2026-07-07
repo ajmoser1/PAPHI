@@ -104,13 +104,8 @@ async function resolveChapter(inviteToken?: string, chapterId?: string): Promise
     return chapter ? { id: chapter.id, contactEmail: chapter.contact_email } : null
   }
 
-  // Default to CMU PA PHI for backwards compatibility
-  const { data: defaultChapter } = await adminClient
-    .from('chapters')
-    .select('id, contact_email')
-    .eq('slug', 'cmu-paphi')
-    .single()
-  return defaultChapter ? { id: defaultChapter.id, contactEmail: defaultChapter.contact_email } : null
+  // No implicit default — callers must provide either an invite token or chapter id.
+  return null
 }
 
 export async function login(prevState: AuthState, formData: FormData): Promise<AuthState> {
@@ -161,10 +156,20 @@ export async function register(prevState: AuthState, formData: FormData): Promis
   }
 
   const { firstName, lastName, email, password, role, inviteToken, chapterId } = validated.data
+  if (!inviteToken && !chapterId) {
+    return {
+      message: 'Please select your chapter or use an invite link from your chapter admin.',
+    }
+  }
 
   const resolvedChapter = await resolveChapter(inviteToken, chapterId)
   if (!resolvedChapter) {
-    return { message: 'Invalid invite link or chapter. Please contact your chapter admin.' }
+    if (inviteToken) {
+      return { message: 'This invite link is invalid or expired. Please request a new chapter invite.' }
+    }
+    return {
+      message: 'Selected chapter is unavailable. Choose another chapter or request your chapter first.',
+    }
   }
   const resolvedChapterId = resolvedChapter.id
   const isChapterContact =
@@ -207,7 +212,10 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     )
 
     if (profileError) {
-      return { message: 'Account created but profile setup failed. Please contact support.' }
+      return {
+        message:
+          'Your account was created, but profile setup did not finish. Try signing in again, and contact support if this keeps happening.',
+      }
     }
   }
 

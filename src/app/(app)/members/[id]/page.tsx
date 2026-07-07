@@ -1,9 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getMemberProfile, getMemberPositions } from '@/lib/members'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Mail, Phone, ExternalLink, Building2, Calendar, MessageSquare } from 'lucide-react'
 import { createConversation } from '@/actions/messaging'
@@ -32,6 +33,25 @@ export default async function MemberProfilePage({
 
   const viewerIsActive = viewerProfile?.status === 'active'
   const viewerChapterId = viewerProfile?.chapter_id ?? null
+
+  if (!viewerIsActive) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <h1 className="text-xl font-semibold text-primary">Approval required</h1>
+            <p className="text-sm text-muted-foreground">
+              Your account is pending chapter admin approval. You can browse members now, but profile
+              details and messaging unlock after approval.
+            </p>
+            <Link href="/profile/edit" className={buttonVariants({ size: 'sm' })}>
+              Complete your profile
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const [{ profile }, positions, { data: contact }] = await Promise.all([
     getMemberProfile(id).then((data) => ({ profile: data })),
