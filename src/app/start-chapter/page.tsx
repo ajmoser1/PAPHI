@@ -3,12 +3,15 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { submitChapterRequest } from '@/actions/founder'
+import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-type FormState = { message?: string; success?: boolean } | undefined
+type FormState =
+  | { message?: string; success?: boolean; needsEmailConfirmation?: boolean }
+  | undefined
 
 async function submitRequest(_prev: FormState, formData: FormData): Promise<FormState> {
   return submitChapterRequest(formData)
@@ -24,11 +27,16 @@ export default function StartChapterPage() {
           <CardHeader>
             <CardTitle>Request submitted</CardTitle>
             <CardDescription>
-              We&apos;ll review your chapter request and get back to you shortly.
+              {state.needsEmailConfirmation
+                ? 'Check your email to confirm your account. Once we approve your chapter, sign in with the password you just created.'
+                : 'We&apos;ll review your chapter request shortly. Once approved, sign in with the email and password you just created.'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Link href="/" className="text-sm text-primary underline">
+          <CardContent className="flex flex-col gap-3">
+            <Link href="/auth/login" className="text-sm text-primary underline">
+              Go to sign in
+            </Link>
+            <Link href="/" className="text-sm text-muted-foreground underline">
               Back to home
             </Link>
           </CardContent>
@@ -43,7 +51,8 @@ export default function StartChapterPage() {
         <CardHeader>
           <CardTitle>Start a Chapter</CardTitle>
           <CardDescription>
-            Request to bring your chapter onto the platform. Free for all SAE chapters.
+            Request to bring your chapter onto the platform and create your admin account. Free for
+            all SAE chapters.
           </CardDescription>
         </CardHeader>
         <form action={action}>
@@ -67,8 +76,13 @@ export default function StartChapterPage() {
               <Label htmlFor="contactEmail">Your email</Label>
               <Input id="contactEmail" name="contactEmail" type="email" required />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" name="password" type="password" required minLength={8} />
+              <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
+            </div>
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? 'Submitting…' : 'Submit request'}
+              {isPending ? 'Submitting…' : 'Create account & submit request'}
             </Button>
           </CardContent>
         </form>

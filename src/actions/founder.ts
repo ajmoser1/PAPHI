@@ -2,19 +2,54 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireFounder } from '@/lib/auth'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getSiteOrigin } from '@/lib/site'
-import { ROLES, STATUS } from '@/lib/constants'
+import { formatAuthErrorMessage } from '@/lib/auth-errors'
+import { DEFAULT_PRIVACY_SETTINGS, ROLES, STATUS } from '@/lib/constants'
+
+function splitContactName(contactName: string): { firstName: string; lastName: string } {
+  const parts = contactName.trim().split(/\s+/)
+  const firstName = parts[0] ?? contactName
+  const lastName = parts.slice(1).join(' ') || 'Admin'
+  return { firstName, lastName }
+}
 
 async function promoteToChapterAdmin(
   adminClient: ReturnType<typeof createAdminClient>,
   userId: string,
-  chapterId: string
+  chapterId: string,
+  contactName?: string
 ) {
-  const { error } = await adminClient
+  const { data: existing } = await adminClient
     .from('profiles')
-    .update({ role: ROLES.CHAPTER_ADMIN, status: STATUS.ACTIVE, chapter_id: chapterId })
+    .select('id')
     .eq('id', userId)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await adminClient
+      .from('profiles')
+      .update({
+        role: ROLES.CHAPTER_ADMIN,
+        status: STATUS.ACTIVE,
+        chapter_id: chapterId,
+      })
+      .eq('id', userId)
+
+    if (error) throw new Error(error.message)
+    return
+  }
+
+  const { firstName, lastName } = splitContactName(contactName ?? 'Chapter Admin')
+  const { error } = await adminClient.from('profiles').insert({
+    id: userId,
+    first_name: firstName,
+    last_name: lastName,
+    role: ROLES.CHAPTER_ADMIN,
+    status: STATUS.ACTIVE,
+    chapter_id: chapterId,
+    privacy_settings: DEFAULT_PRIVACY_SETTINGS,
+  })
 
   if (error) throw new Error(error.message)
 }
@@ -31,23 +66,79 @@ export async function submitChapterRequest(formData: FormData) {
   const schoolName = (formData.get('schoolName') as string)?.trim()
   const contactName = (formData.get('contactName') as string)?.trim()
   const contactEmail = (formData.get('contactEmail') as string)?.trim()
+  const password = formData.get('password') as string
 
-  if (!chapterName || !schoolName || !contactName || !contactEmail) {
+  if (!chapterName || !schoolName || !contactName || !contactEmail || !password) {
     return { message: 'All fields are required.' }
   }
 
+  if (password.length < 8) {
+    return { message: 'Password must be at least 8 characters.' }
+  }
+
+  const { firstName, lastName } = splitContactName(contactName)
+  const supabase = await createClient()
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email: contactEmail,
+    password,
+    options: {
+      data: { first_name: firstName, last_name: lastName },
+    },
+  })
+
+  if (signUpError) {
+    const message = formatAuthErrorMessage(signUpError.message)
+    if (message.toLowerCase().includes('already registered')) {
+      return {
+        message:
+          'An account with this email already exists. Sign in instead, or use a different email.',
+      }
+    }
+    return { message }
+  }
+
+  if (!signUpData.user) {
+    return { message: 'Could not create your account. Please try again.' }
+  }
+
   const adminClient = createAdminClient()
-  const { error } = await adminClient.from('chapter_requests').insert({
+  const { error: profileError } = await adminClient.from('profiles').upsert(
+    {
+      id: signUpData.user.id,
+      first_name: firstName,
+      last_name: lastName,
+      role: ROLES.PENDING,
+      status: STATUS.PENDING_APPROVAL,
+      privacy_settings: DEFAULT_PRIVACY_SETTINGS,
+    },
+    { onConflict: 'id' }
+  )
+
+  if (profileError) {
+    return {
+      message:
+        'Your account was created, but setup did not finish. Try signing in, or contact support if this keeps happening.',
+    }
+  }
+
+  const { error: requestError } = await adminClient.from('chapter_requests').insert({
     fraternity_slug: 'sae',
     chapter_name: chapterName,
     school_name: schoolName,
     contact_name: contactName,
     contact_email: contactEmail,
+    contact_user_id: signUpData.user.id,
     status: 'pending',
   })
 
-  if (error) return { message: error.message }
-  return { success: true }
+  if (requestError) {
+    return { message: requestError.message }
+  }
+
+  return {
+    success: true,
+    needsEmailConfirmation: !signUpData.session,
+  }
 }
 
 export async function approveChapterRequest(requestId: string) {
@@ -107,17 +198,51 @@ export async function approveChapterRequest(requestId: string) {
     .update({ status: 'approved' })
     .eq('id', requestId)
 
-  // The chapter itself is already created and approved at this point — don't let
-  // a failure here (e.g. mailer rate limits) surface as a failed approval. The
-  // founder dashboard's manual invite link and "assign admin" form are the fallback.
   try {
-    await inviteChapterContact(adminClient, request.contact_email, request.contact_name, chapter.id)
+    await setupChapterAdmin(adminClient, {
+      userId: request.contact_user_id,
+      contactEmail: request.contact_email,
+      contactName: request.contact_name,
+      chapterId: chapter.id,
+    })
   } catch {
-    // swallow; fallbacks are always visible on the founder dashboard
+    // Chapter is live; founder dashboard invite link and assign-admin are fallbacks.
   }
 
   revalidatePath('/founder')
   return chapter
+}
+
+async function setupChapterAdmin(
+  adminClient: ReturnType<typeof createAdminClient>,
+  opts: {
+    userId?: string | null
+    contactEmail: string
+    contactName: string
+    chapterId: string
+  }
+) {
+  let userId = opts.userId ?? null
+
+  if (!userId) {
+    const { data: authUsers } = await adminClient.auth.admin.listUsers()
+    const existingUser = authUsers.users.find(
+      (u: { email?: string }) => u.email?.toLowerCase() === opts.contactEmail.toLowerCase()
+    )
+    userId = existingUser?.id ?? null
+  }
+
+  if (userId) {
+    await promoteToChapterAdmin(adminClient, userId, opts.chapterId, opts.contactName)
+    return
+  }
+
+  await inviteChapterContact(
+    adminClient,
+    opts.contactEmail,
+    opts.contactName,
+    opts.chapterId
+  )
 }
 
 async function inviteChapterContact(
@@ -135,19 +260,7 @@ async function inviteChapterContact(
   )
 
   if (!inviteError && invited.user) {
-    await promoteToChapterAdmin(adminClient, invited.user.id, chapterId)
-    return
-  }
-
-  // Most likely cause of failure: this email already has an account (e.g. they
-  // registered before their chapter was approved). Promote them directly
-  // instead of leaving them stranded — they can already sign in.
-  const { data: authUsers } = await adminClient.auth.admin.listUsers()
-  const existingUser = authUsers.users.find(
-    (u: { email?: string }) => u.email?.toLowerCase() === contactEmail.toLowerCase()
-  )
-  if (existingUser) {
-    await promoteToChapterAdmin(adminClient, existingUser.id, chapterId)
+    await promoteToChapterAdmin(adminClient, invited.user.id, chapterId, contactName)
   }
 }
 
