@@ -3,6 +3,21 @@
 import { revalidatePath } from 'next/cache'
 import { requireFounder } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
+import { getSiteOrigin } from '@/lib/site'
+import { ROLES, STATUS } from '@/lib/constants'
+
+async function promoteToChapterAdmin(
+  adminClient: ReturnType<typeof createAdminClient>,
+  userId: string,
+  chapterId: string
+) {
+  const { error } = await adminClient
+    .from('profiles')
+    .update({ role: ROLES.CHAPTER_ADMIN, status: STATUS.ACTIVE, chapter_id: chapterId })
+    .eq('id', userId)
+
+  if (error) throw new Error(error.message)
+}
 
 function slugify(value: string): string {
   return value
@@ -92,8 +107,48 @@ export async function approveChapterRequest(requestId: string) {
     .update({ status: 'approved' })
     .eq('id', requestId)
 
+  // The chapter itself is already created and approved at this point — don't let
+  // a failure here (e.g. mailer rate limits) surface as a failed approval. The
+  // founder dashboard's manual invite link and "assign admin" form are the fallback.
+  try {
+    await inviteChapterContact(adminClient, request.contact_email, request.contact_name, chapter.id)
+  } catch {
+    // swallow; fallbacks are always visible on the founder dashboard
+  }
+
   revalidatePath('/founder')
   return chapter
+}
+
+async function inviteChapterContact(
+  adminClient: ReturnType<typeof createAdminClient>,
+  contactEmail: string,
+  contactName: string,
+  chapterId: string
+) {
+  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
+    contactEmail,
+    {
+      redirectTo: `${getSiteOrigin()}/api/auth/callback?next=/auth/reset-password`,
+      data: { first_name: contactName },
+    }
+  )
+
+  if (!inviteError && invited.user) {
+    await promoteToChapterAdmin(adminClient, invited.user.id, chapterId)
+    return
+  }
+
+  // Most likely cause of failure: this email already has an account (e.g. they
+  // registered before their chapter was approved). Promote them directly
+  // instead of leaving them stranded — they can already sign in.
+  const { data: authUsers } = await adminClient.auth.admin.listUsers()
+  const existingUser = authUsers.users.find(
+    (u: { email?: string }) => u.email?.toLowerCase() === contactEmail.toLowerCase()
+  )
+  if (existingUser) {
+    await promoteToChapterAdmin(adminClient, existingUser.id, chapterId)
+  }
 }
 
 export async function rejectChapterRequest(requestId: string) {
@@ -120,12 +175,7 @@ export async function assignChapterAdmin(chapterId: string, email: string) {
     throw new Error('No user found with that email. They must register first.')
   }
 
-  const { error } = await adminClient
-    .from('profiles')
-    .update({ role: 'chapter_admin', chapter_id: chapterId, status: 'active' })
-    .eq('id', authUser.id)
-
-  if (error) throw new Error(error.message)
+  await promoteToChapterAdmin(adminClient, authUser.id, chapterId)
   revalidatePath('/founder')
 }
 

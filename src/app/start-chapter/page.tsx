@@ -43,7 +43,7 @@ export default function StartChapterPage() {
         <CardHeader>
           <CardTitle>Start a Chapter</CardTitle>
           <CardDescription>
-            Request to bring your SAE chapter onto the platform. Free for all SAE chapters.
+            Request to bring your chapter onto the platform. Free for all SAE chapters.
           </CardDescription>
         </CardHeader>
         <form action={action}>
@@ -53,11 +53,11 @@ export default function StartChapterPage() {
             )}
             <div className="space-y-1">
               <Label htmlFor="chapterName">Chapter name</Label>
-              <Input id="chapterName" name="chapterName" placeholder="e.g. Pitt" required />
+              <Input id="chapterName" name="chapterName" placeholder="e.g. PA PHI" required />
             </div>
             <div className="space-y-1">
               <Label htmlFor="schoolName">School</Label>
-              <Input id="schoolName" name="schoolName" placeholder="e.g. University of Pittsburgh" required />
+              <Input id="schoolName" name="schoolName" placeholder="e.g. Carnegie Mellon University" required />
             </div>
             <div className="space-y-1">
               <Label htmlFor="contactName">Your name</Label>

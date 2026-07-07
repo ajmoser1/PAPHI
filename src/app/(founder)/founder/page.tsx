@@ -152,8 +152,9 @@ export default async function FounderPage() {
                 </div>
                 {ch.contact_email && (
                   <p className="text-xs text-muted-foreground">
-                    Send this invite link to <strong>{ch.contact_email}</strong> — when they
-                    register with that email they&apos;re automatically made chapter admin.
+                    An invite email was sent to <strong>{ch.contact_email}</strong> to set a
+                    password — they&apos;re already set up as chapter admin. If it doesn&apos;t
+                    arrive (check spam), send them the link above instead.
                   </p>
                 )}
                 <form action={assignChapterAdminFromForm.bind(null, ch.id)} className="flex gap-2">

@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export type MemberProfileRow = {
   id: string
@@ -42,13 +42,7 @@ export async function getMemberProfile(id: string): Promise<MemberProfileRow | n
     return { ...(base as MemberProfileRow), featured_position_id: null }
   }
 
-  const { data: adminProfile } = await createAdminClient()
-    .from('profiles')
-    .select(MEMBER_PROFILE_SELECT)
-    .eq('id', id)
-    .single()
-
-  return (adminProfile as MemberProfileRow) ?? null
+  return null
 }
 
 export type MemberPositionRow = {
@@ -73,14 +67,5 @@ export async function getMemberPositions(profileId: string): Promise<MemberPosit
     .order('is_current', { ascending: false })
     .order('start_year', { ascending: false })
 
-  if (data?.length) return data as unknown as MemberPositionRow[]
-
-  const { data: adminData } = await createAdminClient()
-    .from('positions')
-    .select(select)
-    .eq('profile_id', profileId)
-    .order('is_current', { ascending: false })
-    .order('start_year', { ascending: false })
-
-  return (adminData as unknown as MemberPositionRow[]) ?? []
+  return (data as unknown as MemberPositionRow[]) ?? []
 }

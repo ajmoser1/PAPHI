@@ -39,6 +39,13 @@ export function getChapterSlugFromHost(host: string): string | null {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return null
   }
+  // Vercel's own preview/production domains (<project>.vercel.app) are not
+  // customer-facing chapter subdomains — those live on the app's own apex
+  // domain (e.g. cmu-paphi.yourapp.com). Without this, a project named
+  // "paphi" collides with a "paphi" chapter slug lookup on paphi.vercel.app.
+  if (hostname.endsWith('.vercel.app')) {
+    return null
+  }
   const parts = hostname.split('.')
   if (parts.length >= 3 && parts[0] !== 'www') {
     return parts[0]

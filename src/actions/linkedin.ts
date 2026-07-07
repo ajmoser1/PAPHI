@@ -1,6 +1,7 @@
 'use server'
 
 import Anthropic, { APIError } from '@anthropic-ai/sdk'
+import { requireAuth } from '@/lib/auth'
 
 export interface ExtractedPosition {
   company_name: string
@@ -15,6 +16,8 @@ export async function parseLinkedInPdf(
   formData: FormData,
   industryNames: string[]
 ): Promise<{ positions?: ExtractedPosition[]; message?: string }> {
+  await requireAuth()
+
   const file = formData.get('pdf') as File
   if (!file || file.size === 0) return { message: 'No file provided.' }
   if (file.size > 20 * 1024 * 1024) return { message: 'PDF too large (max 20MB).' }
