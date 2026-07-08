@@ -8,6 +8,11 @@ import { ROLES } from '@/lib/constants'
 export async function approveUser(profileId: string) {
   const { profile, adminClient } = await requireChapterAdmin()
 
+  const { data: authUser, error: authUserError } = await adminClient.auth.admin.getUserById(profileId)
+  if (authUserError || !authUser?.user) {
+    throw new Error('Cannot approve profile without a valid auth account.')
+  }
+
   const { data: target } = await adminClient
     .from('profiles')
     .select('role, chapter_id')
@@ -18,12 +23,23 @@ export async function approveUser(profileId: string) {
   if (profile.role !== ROLES.FOUNDER && target.chapter_id !== profile.chapter_id) {
     throw new Error('Cannot approve users outside your chapter.')
   }
+  if (!target.chapter_id && profile.role === ROLES.FOUNDER) {
+    throw new Error('Cannot approve a user without an assigned chapter.')
+  }
+
+  const chapterIdForActivation = target.chapter_id ?? profile.chapter_id
+  if (!chapterIdForActivation) {
+    throw new Error('Cannot approve a user without an assigned chapter.')
+  }
 
   const { error } = await adminClient
     .from('profiles')
     .update({
       status: 'active',
       role: target.role === 'pending' ? 'undergrad' : target.role,
+      chapter_id: chapterIdForActivation,
+      visibility_scope: 'fraternity',
+      search_scope: 'fraternity',
     })
     .eq('id', profileId)
 
