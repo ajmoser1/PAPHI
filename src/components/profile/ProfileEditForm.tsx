@@ -15,11 +15,11 @@ interface Props {
     last_name: string
     bio: string | null
     graduation_year: number | null
-    chapter: string | null
   }
+  chapterLabel: string | null
 }
 
-export function ProfileEditForm({ profile }: Props) {
+export function ProfileEditForm({ profile, chapterLabel }: Props) {
   const [state, action, isPending] = useActionState(updateProfile, undefined)
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function ProfileEditForm({ profile }: Props) {
     if ((state as any)?.message) toast.error((state as any).message)
   }, [state])
 
-  const formKey = `${profile.first_name}|${profile.last_name}|${profile.bio}|${profile.graduation_year}|${profile.chapter}`
+  const formKey = `${profile.first_name}|${profile.last_name}|${profile.bio}|${profile.graduation_year}`
 
   return (
     <form key={formKey} action={action} className="space-y-4">
@@ -61,8 +61,10 @@ export function ProfileEditForm({ profile }: Props) {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="chapter">Chapter / School</Label>
-          <Input id="chapter" name="chapter" defaultValue={profile.chapter ?? ''} />
+          <Label>Chapter</Label>
+          <p className="h-9 flex items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground">
+            {chapterLabel ?? 'No chapter assigned'}
+          </p>
         </div>
       </div>
       <Button type="submit" disabled={isPending}>

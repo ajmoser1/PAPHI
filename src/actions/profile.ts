@@ -33,7 +33,6 @@ const profileSchema = z.object({
   lastName: z.string().min(2, { error: 'Last name required.' }),
   bio: z.string().optional(),
   graduationYear: z.coerce.number().int().min(1900).max(2100).optional(),
-  chapter: z.string().optional(),
 })
 
 export async function updateProfile(_prevState: unknown, formData: FormData) {
@@ -44,7 +43,6 @@ export async function updateProfile(_prevState: unknown, formData: FormData) {
     lastName: formData.get('lastName'),
     bio: formData.get('bio') || undefined,
     graduationYear: formData.get('graduationYear') ? Number(formData.get('graduationYear')) : undefined,
-    chapter: formData.get('chapter') || undefined,
   })
 
   if (!validated.success) {
@@ -56,7 +54,6 @@ export async function updateProfile(_prevState: unknown, formData: FormData) {
     last_name: validated.data.lastName,
     bio: validated.data.bio || null,
     graduation_year: validated.data.graduationYear || null,
-    chapter: validated.data.chapter || null,
   }
 
   let { error } = await supabase.from('profiles').update(updates).eq('id', userId)
@@ -72,10 +69,16 @@ export async function updateProfile(_prevState: unknown, formData: FormData) {
 export async function updateContactInfo(formData: FormData) {
   const { supabase, userId } = await requireAuth()
 
+  const phoneRaw = (formData.get('phone') as string | null)?.trim() ?? ''
+  const digitCount = phoneRaw.replace(/\D/g, '').length
+  if (!phoneRaw || digitCount < 10) {
+    return { message: 'A valid phone number with at least 10 digits is required.' }
+  }
+
   const data = {
     profile_id: userId,
     email: formData.get('email') as string || null,
-    phone: formData.get('phone') as string || null,
+    phone: phoneRaw,
     linkedin_url: formData.get('linkedinUrl') as string || null,
     show_email: formData.get('showEmail') === 'true',
     show_phone: formData.get('showPhone') === 'true',

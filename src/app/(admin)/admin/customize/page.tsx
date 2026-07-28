@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { requireChapterAdmin } from '@/lib/auth'
 import { updateChapterBranding } from '@/actions/chapter-admin'
 import { Button } from '@/components/ui/button'
@@ -6,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { inviteRegisterUrl } from '@/lib/site'
 
 export default async function CustomizePage() {
   const { profile, adminClient } = await requireChapterAdmin()
@@ -61,7 +59,7 @@ export default async function CustomizePage() {
                   id="primaryColor"
                   name="primaryColor"
                   type="color"
-                  defaultValue="#5b21b6"
+                  defaultValue={chapter.primary_color ?? '#5b21b6'}
                   className="h-10"
                 />
               </div>
@@ -71,25 +69,13 @@ export default async function CustomizePage() {
                   id="accentColor"
                   name="accentColor"
                   type="color"
-                  defaultValue="#d4a017"
+                  defaultValue={chapter.accent_color ?? '#d4a017'}
                   className="h-10"
                 />
               </div>
             </div>
             <Button type="submit">Save branding</Button>
           </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invite link</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-2">Share this link with brothers to register:</p>
-          <code className="text-xs bg-muted p-2 rounded block break-all">
-            {inviteRegisterUrl(chapter.invite_token)}
-          </code>
         </CardContent>
       </Card>
     </div>

@@ -5,19 +5,22 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { register } from '@/actions/auth'
 import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/constants'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 type ChapterOption = { id: string; name: string; school_name: string | null }
 
 export function RegisterForm({
   chapters = [],
   hasActiveChapters = true,
+  inviteChapter = null,
 }: {
   chapters?: ChapterOption[]
   hasActiveChapters?: boolean
+  inviteChapter?: { name: string; school_name: string | null } | null
 }) {
   const [state, action, isPending] = useActionState(register, undefined)
   const searchParams = useSearchParams()
@@ -29,9 +32,11 @@ export function RegisterForm({
       <CardHeader>
         <CardTitle>Create an account</CardTitle>
         <CardDescription>
-          {inviteToken
-            ? "You've been invited to join your chapter network."
-            : 'Join your chapter network. Select your chapter and submit for admin approval.'}
+          {inviteToken && inviteChapter
+            ? `You've been invited to join ${inviteChapter.name}${inviteChapter.school_name ? ` — ${inviteChapter.school_name}` : ''}.`
+            : inviteToken
+              ? "You've been invited to join your chapter network."
+              : 'Join your chapter network. Select your chapter and submit for admin approval.'}
         </CardDescription>
       </CardHeader>
       <form action={action}>
@@ -64,6 +69,22 @@ export function RegisterForm({
             )}
           </div>
           <div className="space-y-1">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="+1 555 000 0000"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Chapter admins use this to verify your identity while your account is pending.
+            </p>
+            {state?.errors?.phone && (
+              <p className="text-xs text-destructive">{state.errors.phone[0]}</p>
+            )}
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
             <Input id="password" name="password" type="password" required minLength={8} />
             <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
@@ -93,10 +114,20 @@ export function RegisterForm({
             </div>
           )}
           {!inviteToken && !canSelectChapter && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              {hasActiveChapters
-                ? 'Please pick a chapter to continue.'
-                : 'No active chapters are available yet. Request your chapter to get started.'}
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
+              {hasActiveChapters ? (
+                <p>Please pick a chapter to continue.</p>
+              ) : (
+                <>
+                  <p>No active chapters are available yet. Request your chapter to get started, or ask your chapter admin for an invite link.</p>
+                  <Link
+                    href="/start-chapter"
+                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'bg-white')}
+                  >
+                    Don&apos;t see your chapter? Request to start it
+                  </Link>
+                </>
+              )}
             </div>
           )}
           <div className="space-y-2">
@@ -123,14 +154,13 @@ export function RegisterForm({
             After registering, you&apos;ll enter the site immediately to complete your profile.
             Messaging unlocks once a chapter admin approves your account.
           </p>
-          {!inviteToken && (
-            <p className="text-xs text-muted-foreground">
-              Don&apos;t see your chapter?{' '}
-              <Link href="/start-chapter" className="underline underline-offset-4 hover:text-primary">
-                Request a new chapter
-              </Link>
-              .
-            </p>
+          {!inviteToken && canSelectChapter && (
+            <Link
+              href="/start-chapter"
+              className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
+            >
+              Don&apos;t see your chapter? Request to start it
+            </Link>
           )}
         </CardContent>
         <CardFooter className="flex flex-col gap-3">

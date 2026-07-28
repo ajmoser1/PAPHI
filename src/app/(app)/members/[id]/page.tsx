@@ -147,8 +147,8 @@ export default async function MemberProfilePage({
                   <Calendar className="mr-1 h-3 w-3" /> Class of {profile.graduation_year}
                 </Badge>
               )}
-              {(targetChapter?.name || profile.chapter) && (
-                <Badge variant="secondary">{targetChapter?.name ?? profile.chapter}</Badge>
+              {targetChapter?.name && (
+                <Badge variant="secondary">{targetChapter.name}</Badge>
               )}
               {targetChapter?.school_name && (
                 <Badge variant="secondary">{targetChapter.school_name}</Badge>

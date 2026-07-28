@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getOwnProfileRow } from '@/lib/profile'
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm'
 import { ContactForm } from '@/components/profile/ContactForm'
@@ -39,6 +39,21 @@ export default async function ProfileEditPage() {
 
   if (!profile) redirect('/auth/pending')
 
+  let chapterLabel: string | null = null
+  if (profile.chapter_id) {
+    const adminClient = createAdminClient()
+    const { data: chapter } = await adminClient
+      .from('chapters')
+      .select('name, school_name')
+      .eq('id', profile.chapter_id)
+      .maybeSingle()
+    if (chapter) {
+      chapterLabel = chapter.school_name
+        ? `${chapter.name} — ${chapter.school_name}`
+        : chapter.name
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
@@ -56,8 +71,8 @@ export default async function ProfileEditPage() {
           last_name: profile.last_name ?? '',
           bio: profile.bio,
           graduation_year: profile.graduation_year,
-          chapter: profile.chapter,
         }}
+        chapterLabel={chapterLabel}
       />
 
       <Separator />

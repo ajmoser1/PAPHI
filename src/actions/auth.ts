@@ -12,10 +12,19 @@ const loginSchema = z.object({
   password: z.string().min(6, { error: 'Password must be at least 6 characters.' }),
 })
 
+const phoneSchema = z
+  .string()
+  .trim()
+  .min(1, { error: 'Phone number is required.' })
+  .refine((value) => value.replace(/\D/g, '').length >= 10, {
+    error: 'Enter a valid phone number with at least 10 digits.',
+  })
+
 const registerSchema = z.object({
   firstName: z.string().min(2, { error: 'First name must be at least 2 characters.' }),
   lastName: z.string().min(2, { error: 'Last name must be at least 2 characters.' }),
   email: z.email({ error: 'Please enter a valid email.' }),
+  phone: phoneSchema,
   password: z.string().min(8, { error: 'Password must be at least 8 characters.' }),
   role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
   inviteToken: z.string().optional(),
@@ -107,6 +116,7 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
     email: formData.get('email'),
+    phone: formData.get('phone'),
     password: formData.get('password'),
     role: formData.get('role'),
     inviteToken: (formData.get('inviteToken') as string) || undefined,
@@ -117,7 +127,8 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const { firstName, lastName, email, password, role, inviteToken, chapterId } = validated.data
+  const { firstName, lastName, email, phone, password, role, inviteToken, chapterId } =
+    validated.data
   if (!inviteToken && !chapterId) {
     return {
       message: 'Please select your chapter or use an invite link from your chapter admin.',
@@ -127,7 +138,10 @@ export async function register(prevState: AuthState, formData: FormData): Promis
   const resolvedChapter = await resolveChapter(inviteToken, chapterId)
   if (!resolvedChapter) {
     if (inviteToken) {
-      return { message: 'This invite link is invalid or expired. Please request a new chapter invite.' }
+      return {
+        message:
+          'This invite link is invalid or the chapter is not active. Ask your chapter admin for a current invite link.',
+      }
     }
     return {
       message: 'Selected chapter is unavailable. Choose another chapter or request your chapter first.',
@@ -177,6 +191,22 @@ export async function register(prevState: AuthState, formData: FormData): Promis
       return {
         message:
           'Your account was created, but profile setup did not finish. Try signing in again, and contact support if this keeps happening.',
+      }
+    }
+
+    const { error: contactError } = await adminClient.from('alumni_contact').upsert(
+      {
+        profile_id: signUpData.user.id,
+        email,
+        phone,
+      },
+      { onConflict: 'profile_id' }
+    )
+
+    if (contactError) {
+      return {
+        message:
+          'Your account was created, but we could not save your phone number. Sign in, add your phone on your profile, then wait for admin approval.',
       }
     }
   }

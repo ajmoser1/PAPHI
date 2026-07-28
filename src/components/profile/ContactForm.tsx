@@ -42,40 +42,76 @@ export function ContactForm({ contact }: Props) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Choose what contact information is visible to other members.
-        Adding your phone helps admins verify your identity while your account is pending approval.
+        Choose what contact information is visible to other members. Phone is required so chapter
+        admins can verify your identity.
       </p>
 
-      {[
-        {
-          id: 'email', label: 'Email', name: 'email', type: 'email',
-          value: contact?.email, show: showEmail, setShow: setShowEmail, placeholder: 'you@example.com',
-        },
-        {
-          id: 'phone', label: 'Phone', name: 'phone', type: 'tel',
-          value: contact?.phone, show: showPhone, setShow: setShowPhone, placeholder: '+1 555 000 0000',
-        },
-        {
-          id: 'linkedinUrl', label: 'LinkedIn URL', name: 'linkedinUrl', type: 'url',
-          value: contact?.linkedin_url, show: showLinkedin, setShow: setShowLinkedin, placeholder: 'https://linkedin.com/in/...',
-        },
-      ].map(({ id, label, name, type, value, show, setShow, placeholder }) => (
-        <div key={id} className="space-y-1">
-          <div className="flex items-center justify-between">
-            <Label htmlFor={id}>{label}</Label>
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={show}
-                onChange={(e) => setShow(e.target.checked)}
-                className="accent-primary"
-              />
-              Visible to members
-            </label>
-          </div>
-          <Input id={id} name={name} type={type} defaultValue={value ?? ''} placeholder={placeholder} />
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="email">Email</Label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showEmail}
+              onChange={(e) => setShowEmail(e.target.checked)}
+              className="accent-primary"
+            />
+            Visible to members
+          </label>
         </div>
-      ))}
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          defaultValue={contact?.email ?? ''}
+          placeholder="you@example.com"
+        />
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="phone">Phone</Label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showPhone}
+              onChange={(e) => setShowPhone(e.target.checked)}
+              className="accent-primary"
+            />
+            Visible to members
+          </label>
+        </div>
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          defaultValue={contact?.phone ?? ''}
+          placeholder="+1 555 000 0000"
+          required
+        />
+      </div>
+
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showLinkedin}
+              onChange={(e) => setShowLinkedin(e.target.checked)}
+              className="accent-primary"
+            />
+            Visible to members
+          </label>
+        </div>
+        <Input
+          id="linkedinUrl"
+          name="linkedinUrl"
+          type="url"
+          defaultValue={contact?.linkedin_url ?? ''}
+          placeholder="https://linkedin.com/in/..."
+        />
+      </div>
 
       <Button type="submit" disabled={isPending}>
         {isPending ? 'Saving…' : 'Save contact info'}

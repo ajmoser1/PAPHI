@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Phone } from 'lucide-react'
 import { ROLES } from '@/lib/constants'
+import { inviteRegisterUrl } from '@/lib/site'
+import { InviteLinkCard } from '@/components/admin/InviteLinkCard'
 
 export default async function ApprovalsPage() {
   const supabase = await createClient()
@@ -49,6 +51,18 @@ export default async function ApprovalsPage() {
     ])
   )
 
+  let inviteUrl: string | null = null
+  if (adminProfile?.chapter_id) {
+    const { data: chapter } = await adminClient
+      .from('chapters')
+      .select('invite_token')
+      .eq('id', adminProfile.chapter_id)
+      .maybeSingle()
+    if (chapter?.invite_token) {
+      inviteUrl = inviteRegisterUrl(chapter.invite_token)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -56,8 +70,23 @@ export default async function ApprovalsPage() {
         <p className="text-muted-foreground">{pendingList.length} accounts awaiting review</p>
       </div>
 
+      {inviteUrl ? (
+        <InviteLinkCard inviteUrl={inviteUrl} emptyPending={!pendingList.length} />
+      ) : adminProfile?.role === ROLES.FOUNDER ? (
+        <Card>
+          <CardContent className="py-4 text-sm text-muted-foreground">
+            Founder accounts without a chapter assignment can copy invite links from the founder
+            dashboard for each chapter.
+          </CardContent>
+        </Card>
+      ) : null}
+
       {!pendingList.length ? (
-        <p className="text-muted-foreground">No pending accounts.</p>
+        <p className="text-muted-foreground">
+          {inviteUrl
+            ? 'No pending accounts yet. Share your invite link to get members.'
+            : 'No pending accounts.'}
+        </p>
       ) : (
         <div className="space-y-3">
           {pendingList.map((p) => {
