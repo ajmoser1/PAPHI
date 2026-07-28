@@ -93,24 +93,32 @@ export function RegisterForm({
             )}
           </div>
           {canSelectChapter && (
-            <div className="space-y-1">
-              <Label htmlFor="chapterId">Chapter</Label>
-              <select
-                id="chapterId"
-                name="chapterId"
-                required
-                className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <Label htmlFor="chapterId">Chapter</Label>
+                <select
+                  id="chapterId"
+                  name="chapterId"
+                  required
+                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
+                >
+                  <option value="">Select your chapter</option>
+                  {chapters.map((ch) => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.name} — {ch.school_name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Approval is required before you can view member details or send messages.
+                </p>
+              </div>
+              <Link
+                href="/start-chapter"
+                className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
               >
-                <option value="">Select your chapter</option>
-                {chapters.map((ch) => (
-                  <option key={ch.id} value={ch.id}>
-                    {ch.name} — {ch.school_name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground">
-                Approval is required before you can view member details or send messages.
-              </p>
+                Don&apos;t see your chapter? Request to start it
+              </Link>
             </div>
           )}
           {!inviteToken && !canSelectChapter && (
@@ -154,14 +162,6 @@ export function RegisterForm({
             After registering, you&apos;ll enter the site immediately to complete your profile.
             Messaging unlocks once a chapter admin approves your account.
           </p>
-          {!inviteToken && canSelectChapter && (
-            <Link
-              href="/start-chapter"
-              className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
-            >
-              Don&apos;t see your chapter? Request to start it
-            </Link>
-          )}
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button

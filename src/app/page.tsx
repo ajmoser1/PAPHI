@@ -22,16 +22,20 @@ export default async function Home() {
             get warm intros, and land opportunities through your network.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link href="/start-chapter" className={cn(buttonVariants({ size: 'lg' }))}>
-              Start a chapter
-            </Link>
-            <Link href="/auth/login" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}>
+            <Link href="/auth/login" className={cn(buttonVariants({ size: 'lg' }))}>
               Sign in
             </Link>
+            <Link
+              href="/auth/register"
+              className={cn(
+                buttonVariants({ size: 'lg' }),
+                'border-transparent bg-[var(--gold)] text-primary hover:bg-[var(--gold)]/90'
+              )}
+            >
+              Register
+            </Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Free for all SAE chapters nationwide.
-          </p>
+          
           <AffiliationBranding />
         </main>
       </div>
@@ -54,11 +58,17 @@ export default async function Home() {
             </h1>
             <p className="max-w-2xl text-lg text-foreground sm:text-xl">{tagline}</p>
             <div className="flex flex-wrap justify-center gap-3">
-              <Link href="/auth/register" className={cn(buttonVariants({ size: 'lg' }))}>
-                Get started
-              </Link>
-              <Link href="/auth/login" className={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}>
+              <Link href="/auth/login" className={cn(buttonVariants({ size: 'lg' }))}>
                 Sign in
+              </Link>
+              <Link
+                href="/auth/register"
+                className={cn(
+                  buttonVariants({ size: 'lg' }),
+                  'border-transparent bg-[var(--gold)] text-primary hover:bg-[var(--gold)]/90'
+                )}
+              >
+                Register
               </Link>
             </div>
             <AffiliationBranding schoolName={chapter.school_name} />

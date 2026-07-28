@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopNav } from './TopNav'
 import { SearchScopeToggle } from './SearchScopeToggle'
+import { PendingApprovalNotice } from './PendingApprovalNotice'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -61,12 +62,7 @@ export function AppShell({
         <div className="hidden lg:flex items-center justify-end px-6 py-2 border-b bg-white/50">
           <SearchScopeToggle currentScope={searchScope} />
         </div>
-        {isPending && (
-          <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 text-sm text-amber-900">
-            Your account is pending approval. Complete your profile below. You can browse members but
-            can&apos;t message until approved.
-          </div>
-        )}
+        {isPending && <PendingApprovalNotice />}
         <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
           {children}
         </main>

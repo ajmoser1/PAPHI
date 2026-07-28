@@ -3,10 +3,11 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { login } from '@/actions/auth'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 export default function LoginPage() {
   const [state, action, isPending] = useActionState(login, undefined)
@@ -49,12 +50,15 @@ export default function LoginPage() {
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? 'Signing in…' : 'Sign in'}
           </Button>
-          <p className="text-sm text-muted-foreground text-center">
-            Don&apos;t have an account?{' '}
-            <Link href="/auth/register" className="underline underline-offset-4 hover:text-primary">
-              Register
-            </Link>
-          </p>
+          <Link
+            href="/auth/register"
+            className={cn(
+              buttonVariants({ size: 'default' }),
+              'w-full border-transparent bg-[var(--gold)] text-primary hover:bg-[var(--gold)]/90'
+            )}
+          >
+            Create an account
+          </Link>
         </CardFooter>
       </form>
     </Card>
