@@ -2,12 +2,14 @@ import Link from 'next/link'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { getTenantContext } from '@/lib/tenant'
+import { getPlatformStats } from '@/lib/stats'
 import { TenantTheme } from '@/components/layout/TenantTheme'
 import { AffiliationBranding } from '@/components/layout/AffiliationBranding'
 import { CrestBackground } from '@/components/layout/CrestBackground'
+import { PlatformStats } from '@/components/layout/PlatformStats'
 
 export default async function Home() {
-  const tenant = await getTenantContext()
+  const [tenant, stats] = await Promise.all([getTenantContext(), getPlatformStats()])
 
   if (tenant.isApex || !tenant.chapter) {
     return (
@@ -35,8 +37,11 @@ export default async function Home() {
               Register
             </Link>
           </div>
-          
-          <AffiliationBranding />
+
+          <div className="flex flex-col items-center">
+            <AffiliationBranding />
+            <PlatformStats initialStats={stats} />
+          </div>
         </main>
       </div>
     )
@@ -71,7 +76,10 @@ export default async function Home() {
                 Register
               </Link>
             </div>
-            <AffiliationBranding schoolName={chapter.school_name} />
+            <div className="flex flex-col items-center">
+              <AffiliationBranding schoolName={chapter.school_name} />
+              <PlatformStats initialStats={stats} />
+            </div>
           </section>
         </main>
       </div>
