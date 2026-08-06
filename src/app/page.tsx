@@ -19,8 +19,8 @@ export default async function Home() {
           <h1 className="text-4xl sm:text-5xl font-bold text-primary tracking-tight">
             Chapter Connect
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl">
-            The referral and networking platform for fraternity chapters. Find brothers by industry,
+          <p className="text-lg text-foreground max-w-2xl">
+            The referral & networking platform for fraternity chapters. Find brothers by industry,
             get warm intros, and land opportunities through your network.
           </p>
           <div className="flex flex-wrap justify-center gap-3">

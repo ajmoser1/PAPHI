@@ -148,7 +148,7 @@ export default async function FounderPage() {
                   )}
                 </div>
                 <div className="text-xs bg-muted p-2 rounded font-mono break-all">
-                  Invite: {inviteRegisterUrl(ch.invite_token)}
+                  Invite: {inviteRegisterUrl(ch.invite_token, user.id)}
                 </div>
                 {ch.contact_email && (
                   <p className="text-xs text-muted-foreground">

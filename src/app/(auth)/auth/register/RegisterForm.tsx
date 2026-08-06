@@ -12,15 +12,40 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { cn } from '@/lib/utils'
 
 type ChapterOption = { id: string; name: string; school_name: string | null }
+type Inviter = { first_name: string; last_name: string }
+
+function inviteDescription(
+  inviteToken: string,
+  inviteChapter: ChapterOption | null,
+  inviter: Inviter | null
+): string {
+  if (inviteToken && inviteChapter && inviter) {
+    const name = `${inviter.first_name} ${inviter.last_name}`
+    return inviteChapter.school_name
+      ? `${name} invited you to ${inviteChapter.name} at ${inviteChapter.school_name}.`
+      : `${name} invited you to ${inviteChapter.name}.`
+  }
+  if (inviteToken && inviteChapter) {
+    return `You've been invited to join ${inviteChapter.name}${
+      inviteChapter.school_name ? ` — ${inviteChapter.school_name}` : ''
+    }.`
+  }
+  if (inviteToken) {
+    return "You've been invited to join your chapter network."
+  }
+  return 'Join your chapter network. Select your chapter and submit for admin approval.'
+}
 
 export function RegisterForm({
   chapters = [],
   hasActiveChapters = true,
   inviteChapter = null,
+  inviter = null,
 }: {
   chapters?: ChapterOption[]
   hasActiveChapters?: boolean
-  inviteChapter?: { name: string; school_name: string | null } | null
+  inviteChapter?: ChapterOption | null
+  inviter?: Inviter | null
 }) {
   const [state, action, isPending] = useActionState(register, undefined)
   const searchParams = useSearchParams()
@@ -32,11 +57,7 @@ export function RegisterForm({
       <CardHeader>
         <CardTitle>Create an account</CardTitle>
         <CardDescription>
-          {inviteToken && inviteChapter
-            ? `You've been invited to join ${inviteChapter.name}${inviteChapter.school_name ? ` — ${inviteChapter.school_name}` : ''}.`
-            : inviteToken
-              ? "You've been invited to join your chapter network."
-              : 'Join your chapter network. Select your chapter and submit for admin approval.'}
+          {inviteDescription(inviteToken, inviteChapter, inviter)}
         </CardDescription>
       </CardHeader>
       <form action={action}>

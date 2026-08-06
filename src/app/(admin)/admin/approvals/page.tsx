@@ -4,7 +4,7 @@ import { approveUser, rejectUser } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Phone } from 'lucide-react'
+import { Building2, Phone } from 'lucide-react'
 import { ROLES } from '@/lib/constants'
 import { inviteRegisterUrl } from '@/lib/site'
 import { InviteLinkCard } from '@/components/admin/InviteLinkCard'
@@ -33,7 +33,14 @@ export default async function ApprovalsPage() {
 
   const { data: pending } = await query
 
-  type PendingProfile = { id: string; first_name: string; last_name: string; role: string; created_at: string }
+  type PendingProfile = {
+    id: string
+    first_name: string
+    last_name: string
+    role: string
+    created_at: string
+    chapter_id: string | null
+  }
   const pendingList = (pending ?? []) as PendingProfile[]
 
   const pendingIds = pendingList.map((p) => p.id)
@@ -51,6 +58,25 @@ export default async function ApprovalsPage() {
     ])
   )
 
+  const chapterIds = [
+    ...new Set(pendingList.map((p) => p.chapter_id).filter((id): id is string => Boolean(id))),
+  ]
+  const { data: chapters } = chapterIds.length
+    ? await adminClient
+        .from('chapters')
+        .select('id, name, school_name')
+        .in('id', chapterIds)
+    : { data: [] }
+
+  const chapterLabelById = Object.fromEntries(
+    (
+      (chapters ?? []) as { id: string; name: string; school_name: string | null }[]
+    ).map((ch) => [
+      ch.id,
+      ch.school_name ? `${ch.name} — ${ch.school_name}` : ch.name,
+    ])
+  )
+
   let inviteUrl: string | null = null
   if (adminProfile?.chapter_id) {
     const { data: chapter } = await adminClient
@@ -59,7 +85,7 @@ export default async function ApprovalsPage() {
       .eq('id', adminProfile.chapter_id)
       .maybeSingle()
     if (chapter?.invite_token) {
-      inviteUrl = inviteRegisterUrl(chapter.invite_token)
+      inviteUrl = inviteRegisterUrl(chapter.invite_token, user?.id)
     }
   }
 
@@ -91,6 +117,7 @@ export default async function ApprovalsPage() {
         <div className="space-y-3">
           {pendingList.map((p) => {
             const phone = phoneByProfile[p.id]
+            const chapterLabel = p.chapter_id ? chapterLabelById[p.chapter_id] : null
             return (
               <Card key={p.id}>
                 <CardContent className="flex items-center justify-between py-4 gap-4">
@@ -108,6 +135,14 @@ export default async function ApprovalsPage() {
                         <span className="font-mono font-medium">{phone}</span>
                       ) : (
                         <span className="text-muted-foreground italic">No phone yet</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1.5 text-sm">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      {chapterLabel ? (
+                        <span>{chapterLabel}</span>
+                      ) : (
+                        <span className="text-muted-foreground italic">No chapter assigned</span>
                       )}
                     </div>
                   </div>

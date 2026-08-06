@@ -3,6 +3,8 @@ export function getSiteOrigin(): string {
   return url.replace(/\/$/, '')
 }
 
-export function inviteRegisterUrl(inviteToken: string): string {
-  return `${getSiteOrigin()}/auth/register?invite=${inviteToken}`
+export function inviteRegisterUrl(inviteToken: string, fromProfileId?: string): string {
+  const base = `${getSiteOrigin()}/auth/register?invite=${encodeURIComponent(inviteToken)}`
+  if (!fromProfileId) return base
+  return `${base}&from=${encodeURIComponent(fromProfileId)}`
 }

@@ -85,7 +85,7 @@ export function PlatformStats({ initialStats }: PlatformStatsProps) {
           <span className="text-3xl font-bold tracking-tight text-primary sm:text-4xl">
             {formatCount(value)}
           </span>
-          <span className="text-sm text-muted-foreground">{label}</span>
+          <span className="text-sm text-primary">{label}</span>
         </div>
       ))}
     </div>
