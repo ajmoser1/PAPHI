@@ -44,12 +44,12 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname.startsWith('/auth/')
   const isPendingRoute = pathname === '/auth/pending'
+  const isCompleteSignupRoute = pathname === '/auth/complete-signup'
   const isPasswordRecoveryRoute =
     pathname === '/auth/forgot-password' || pathname === '/auth/reset-password'
   const isApiRoute = pathname.startsWith('/api/')
   const isFounderRoute = pathname.startsWith('/founder')
   const isMessagesRoute = pathname.startsWith('/messages')
-  const isProfileSetupRoute = pathname === '/profile/edit'
 
   // Public routes — no auth needed
   const isPublicRoute =
@@ -72,10 +72,16 @@ export async function proxy(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Profile not created yet (trigger race) — send to setup, not old approval wall
-    if (!profile && !isPendingRoute && !isApiRoute && !isProfileSetupRoute) {
+    // No profile yet (OAuth or incomplete signup) — finish membership setup
+    if (
+      !profile &&
+      !isCompleteSignupRoute &&
+      !isPendingRoute &&
+      !isApiRoute &&
+      !isPasswordRecoveryRoute
+    ) {
       const url = request.nextUrl.clone()
-      url.pathname = '/profile/edit'
+      url.pathname = '/auth/complete-signup'
       return NextResponse.redirect(url)
     }
 

@@ -30,9 +30,8 @@ export default async function AdminLayout({
           <p className="text-xs text-muted-foreground">{profile.first_name}</p>
         </div>
         {[
-          { href: '/admin/approvals', label: 'Approvals' },
+          { href: '/admin/approvals', label: 'Members' },
           { href: '/admin/customize', label: 'Customize' },
-          { href: '/admin/profiles', label: 'Profiles' },
           { href: '/admin/companies', label: 'Companies' },
           { href: '/admin/industries', label: 'Industries' },
           { href: '/members', label: '← Back to app' },

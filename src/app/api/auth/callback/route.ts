@@ -1,16 +1,52 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { STATUS } from '@/lib/constants'
+
+const ALLOWED_NEXT_PATHS = new Set(['/auth/reset-password'])
+
+function safeNextPath(next: string | null): string | null {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return null
+  return ALLOWED_NEXT_PATHS.has(next) ? next : null
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const invite = searchParams.get('invite')
+  const from = searchParams.get('from')
+  const next = safeNextPath(searchParams.get('next'))
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      if (next) {
+        return NextResponse.redirect(`${origin}${next}`)
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profile) {
+          if (profile.status === STATUS.PENDING_APPROVAL) {
+            return NextResponse.redirect(`${origin}/profile/edit`)
+          }
+          return NextResponse.redirect(`${origin}/members`)
+        }
+      }
+
+      const completeUrl = new URL('/auth/complete-signup', origin)
+      if (invite) completeUrl.searchParams.set('invite', invite)
+      if (from) completeUrl.searchParams.set('from', from)
+      return NextResponse.redirect(completeUrl.toString())
     }
   }
 

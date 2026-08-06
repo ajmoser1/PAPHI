@@ -45,7 +45,6 @@ export async function approveUser(profileId: string) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/admin/approvals')
-  revalidatePath('/admin/profiles')
 }
 
 export async function rejectUser(profileId: string) {
@@ -104,7 +103,7 @@ export async function removeAcceptedProfile(profileId: string) {
     .eq('id', profileId)
 
   if (error) throw new Error(error.message)
-  revalidatePath('/admin/profiles')
+  revalidatePath('/admin/approvals')
   revalidatePath('/members')
 }
 
@@ -167,5 +166,5 @@ export async function promoteToChapterAdmin(profileId: string) {
     .eq('id', profileId)
 
   if (error) throw new Error(error.message)
-  revalidatePath('/admin/profiles')
+  revalidatePath('/admin/approvals')
 }

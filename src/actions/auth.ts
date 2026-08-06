@@ -31,6 +31,15 @@ const registerSchema = z.object({
   chapterId: z.string().optional(),
 })
 
+const completeGoogleSignupSchema = z.object({
+  firstName: z.string().min(2, { error: 'First name must be at least 2 characters.' }),
+  lastName: z.string().min(2, { error: 'Last name must be at least 2 characters.' }),
+  phone: phoneSchema,
+  role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
+  inviteToken: z.string().optional(),
+  chapterId: z.string().optional(),
+})
+
 const forgotPasswordSchema = z.object({
   email: z.email({ error: 'Please enter a valid email.' }),
 })
@@ -77,6 +86,81 @@ async function resolveChapter(inviteToken?: string, chapterId?: string): Promise
 
   // No implicit default — callers must provide either an invite token or chapter id.
   return null
+}
+
+async function createMemberProfile(params: {
+  userId: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  role: 'undergrad' | 'alumni'
+  inviteToken?: string
+  chapterId?: string
+}): Promise<AuthState> {
+  const { userId, firstName, lastName, email, phone, role, inviteToken, chapterId } = params
+
+  if (!inviteToken && !chapterId) {
+    return {
+      message: 'Please select your chapter or use an invite link from your chapter admin.',
+    }
+  }
+
+  const resolvedChapter = await resolveChapter(inviteToken, chapterId)
+  if (!resolvedChapter) {
+    if (inviteToken) {
+      return {
+        message:
+          'This invite link is invalid or the chapter is not active. Ask your chapter admin for a current invite link.',
+      }
+    }
+    return {
+      message: 'Selected chapter is unavailable. Choose another chapter or request your chapter first.',
+    }
+  }
+
+  const isChapterContact =
+    !!resolvedChapter.contactEmail &&
+    resolvedChapter.contactEmail.toLowerCase() === email.toLowerCase()
+
+  const adminClient = createAdminClient()
+  const { error: profileError } = await adminClient.from('profiles').upsert(
+    {
+      id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      role: isChapterContact ? ROLES.CHAPTER_ADMIN : role,
+      status: isChapterContact ? STATUS.ACTIVE : STATUS.PENDING_APPROVAL,
+      chapter_id: resolvedChapter.id,
+      privacy_settings: DEFAULT_PRIVACY_SETTINGS,
+    },
+    { onConflict: 'id' }
+  )
+
+  if (profileError) {
+    return {
+      message:
+        'Your account was created, but profile setup did not finish. Try signing in again, and contact support if this keeps happening.',
+    }
+  }
+
+  const { error: contactError } = await adminClient.from('alumni_contact').upsert(
+    {
+      profile_id: userId,
+      email,
+      phone,
+    },
+    { onConflict: 'profile_id' }
+  )
+
+  if (contactError) {
+    return {
+      message:
+        'Your account was created, but we could not save your phone number. Sign in, add your phone on your profile, then wait for admin approval.',
+    }
+  }
+
+  return undefined
 }
 
 export async function login(prevState: AuthState, formData: FormData): Promise<AuthState> {
@@ -129,28 +213,6 @@ export async function register(prevState: AuthState, formData: FormData): Promis
 
   const { firstName, lastName, email, phone, password, role, inviteToken, chapterId } =
     validated.data
-  if (!inviteToken && !chapterId) {
-    return {
-      message: 'Please select your chapter or use an invite link from your chapter admin.',
-    }
-  }
-
-  const resolvedChapter = await resolveChapter(inviteToken, chapterId)
-  if (!resolvedChapter) {
-    if (inviteToken) {
-      return {
-        message:
-          'This invite link is invalid or the chapter is not active. Ask your chapter admin for a current invite link.',
-      }
-    }
-    return {
-      message: 'Selected chapter is unavailable. Choose another chapter or request your chapter first.',
-    }
-  }
-  const resolvedChapterId = resolvedChapter.id
-  const isChapterContact =
-    !!resolvedChapter.contactEmail &&
-    resolvedChapter.contactEmail.toLowerCase() === email.toLowerCase()
 
   const supabase = await createClient()
   const { data: signUpData, error } = await supabase.auth.signUp({
@@ -173,43 +235,73 @@ export async function register(prevState: AuthState, formData: FormData): Promis
   }
 
   if (signUpData.user) {
-    const adminClient = createAdminClient()
-    const { error: profileError } = await adminClient.from('profiles').upsert(
-      {
-        id: signUpData.user.id,
-        first_name: firstName,
-        last_name: lastName,
-        role: isChapterContact ? ROLES.CHAPTER_ADMIN : role,
-        status: isChapterContact ? STATUS.ACTIVE : STATUS.PENDING_APPROVAL,
-        chapter_id: resolvedChapterId,
-        privacy_settings: DEFAULT_PRIVACY_SETTINGS,
-      },
-      { onConflict: 'id' }
-    )
-
-    if (profileError) {
-      return {
-        message:
-          'Your account was created, but profile setup did not finish. Try signing in again, and contact support if this keeps happening.',
-      }
-    }
-
-    const { error: contactError } = await adminClient.from('alumni_contact').upsert(
-      {
-        profile_id: signUpData.user.id,
-        email,
-        phone,
-      },
-      { onConflict: 'profile_id' }
-    )
-
-    if (contactError) {
-      return {
-        message:
-          'Your account was created, but we could not save your phone number. Sign in, add your phone on your profile, then wait for admin approval.',
-      }
-    }
+    const profileResult = await createMemberProfile({
+      userId: signUpData.user.id,
+      firstName,
+      lastName,
+      email,
+      phone,
+      role,
+      inviteToken,
+      chapterId,
+    })
+    if (profileResult) return profileResult
   }
+
+  redirect('/profile/edit')
+}
+
+export async function completeGoogleSignup(
+  prevState: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const validated = completeGoogleSignupSchema.safeParse({
+    firstName: formData.get('firstName'),
+    lastName: formData.get('lastName'),
+    phone: formData.get('phone'),
+    role: formData.get('role'),
+    inviteToken: (formData.get('inviteToken') as string) || undefined,
+    chapterId: (formData.get('chapterId') as string) || undefined,
+  })
+
+  if (!validated.success) {
+    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user?.email) {
+    return { message: 'Your Google session expired. Please sign in again.' }
+  }
+
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (existingProfile) {
+    if (existingProfile.status === STATUS.PENDING_APPROVAL) {
+      redirect('/profile/edit')
+    }
+    redirect('/members')
+  }
+
+  const { firstName, lastName, phone, role, inviteToken, chapterId } = validated.data
+  const profileResult = await createMemberProfile({
+    userId: user.id,
+    firstName,
+    lastName,
+    email: user.email,
+    phone,
+    role,
+    inviteToken,
+    chapterId,
+  })
+  if (profileResult) return profileResult
 
   redirect('/profile/edit')
 }

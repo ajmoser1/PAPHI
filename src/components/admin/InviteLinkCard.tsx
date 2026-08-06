@@ -30,7 +30,7 @@ export function InviteLinkCard({
         <CardTitle className="text-base">Invite brothers</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-foreground">
           {emptyPending
             ? 'Share this link to get your first members. They register with a phone number, then appear here for approval.'
             : 'Share this link so brothers can register. They join with a phone number, then appear below for approval.'}

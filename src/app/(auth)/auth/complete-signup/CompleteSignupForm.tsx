@@ -3,9 +3,7 @@
 import { useActionState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { register } from '@/actions/auth'
-import { AuthDivider, GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
-import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/constants'
+import { completeGoogleSignup } from '@/actions/auth'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,67 +32,98 @@ function inviteDescription(
   if (inviteToken) {
     return "You've been invited to join your chapter network."
   }
-  return 'Join your chapter network. Select your chapter and submit for admin approval.'
+  return 'Finish setting up your account. Select your chapter and submit for admin approval.'
 }
 
-export function RegisterForm({
+function splitGoogleName(metadata: Record<string, unknown>): {
+  firstName: string
+  lastName: string
+} {
+  const given = typeof metadata.given_name === 'string' ? metadata.given_name : ''
+  const family = typeof metadata.family_name === 'string' ? metadata.family_name : ''
+  if (given || family) {
+    return { firstName: given, lastName: family }
+  }
+
+  const full =
+    (typeof metadata.full_name === 'string' && metadata.full_name) ||
+    (typeof metadata.name === 'string' && metadata.name) ||
+    ''
+  const parts = full.trim().split(/\s+/)
+  if (parts.length === 0 || (parts.length === 1 && !parts[0])) {
+    return { firstName: '', lastName: '' }
+  }
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' }
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') }
+}
+
+export function CompleteSignupForm({
+  email,
+  userMetadata,
   chapters = [],
   hasActiveChapters = true,
   inviteChapter = null,
   inviter = null,
 }: {
+  email: string
+  userMetadata: Record<string, unknown>
   chapters?: ChapterOption[]
   hasActiveChapters?: boolean
   inviteChapter?: ChapterOption | null
   inviter?: Inviter | null
 }) {
-  const [state, action, isPending] = useActionState(register, undefined)
+  const [state, action, isPending] = useActionState(completeGoogleSignup, undefined)
   const searchParams = useSearchParams()
   const inviteToken = searchParams.get('invite') ?? ''
-  const fromProfileId = searchParams.get('from') ?? ''
   const canSelectChapter = !inviteToken && chapters.length > 0
+  const { firstName, lastName } = splitGoogleName(userMetadata)
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
+        <CardTitle>Complete your profile</CardTitle>
         <CardDescription>
           {inviteDescription(inviteToken, inviteChapter, inviter)}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {state?.message && (
-          <p className="text-sm text-destructive">{state.message}</p>
-        )}
-        <GoogleSignInButton
-          invite={inviteToken || undefined}
-          from={fromProfileId || undefined}
-        />
-        <AuthDivider label="or register with email" />
-        <form action={action} className="space-y-4">
+      <form action={action}>
+        <CardContent className="space-y-4">
           {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
+          {state?.message && (
+            <p className="text-sm text-destructive">{state.message}</p>
+          )}
+          <div className="space-y-1">
+            <Label>Email</Label>
+            <Input value={email} disabled readOnly />
+            <p className="text-xs text-muted-foreground">Signed in with Google</p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="firstName">First name</Label>
-              <Input id="firstName" name="firstName" placeholder="John" required />
+              <Input
+                id="firstName"
+                name="firstName"
+                placeholder="John"
+                defaultValue={firstName}
+                required
+              />
               {state?.errors?.firstName && (
                 <p className="text-xs text-destructive">{state.errors.firstName[0]}</p>
               )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="lastName">Last name</Label>
-              <Input id="lastName" name="lastName" placeholder="Smith" required />
+              <Input
+                id="lastName"
+                name="lastName"
+                placeholder="Smith"
+                defaultValue={lastName}
+                required
+              />
               {state?.errors?.lastName && (
                 <p className="text-xs text-destructive">{state.errors.lastName[0]}</p>
               )}
             </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
-            {state?.errors?.email && (
-              <p className="text-xs text-destructive">{state.errors.email[0]}</p>
-            )}
           </div>
           <div className="space-y-1">
             <Label htmlFor="phone">Phone</Label>
@@ -110,14 +139,6 @@ export function RegisterForm({
             </p>
             {state?.errors?.phone && (
               <p className="text-xs text-destructive">{state.errors.phone[0]}</p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required minLength={8} />
-            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
-            {state?.errors?.password && (
-              <p className="text-xs text-destructive">{state.errors.password[0]}</p>
             )}
           </div>
           {canSelectChapter && (
@@ -155,7 +176,10 @@ export function RegisterForm({
                 <p>Please pick a chapter to continue.</p>
               ) : (
                 <>
-                  <p>No active chapters are available yet. Request your chapter to get started, or ask your chapter admin for an invite link.</p>
+                  <p>
+                    No active chapters are available yet. Request your chapter to get started, or
+                    ask your chapter admin for an invite link.
+                  </p>
                   <Link
                     href="/start-chapter"
                     className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'bg-white')}
@@ -186,25 +210,15 @@ export function RegisterForm({
               <p className="text-xs text-destructive">{state.errors.role[0]}</p>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            After registering, you&apos;ll enter the site immediately to complete your profile.
-            Messaging unlocks once a chapter admin approves your account.
-          </p>
           <Button
             type="submit"
             className="w-full"
             disabled={isPending || (!inviteToken && !canSelectChapter)}
           >
-            {isPending ? 'Creating account…' : 'Create account'}
+            {isPending ? 'Saving…' : 'Continue'}
           </Button>
-        </form>
-        <p className="text-sm text-muted-foreground text-center">
-          Already have an account?{' '}
-          <Link href="/auth/login" className="underline underline-offset-4 hover:text-primary">
-            Sign in
-          </Link>
-        </p>
-      </CardContent>
+        </CardContent>
+      </form>
     </Card>
   )
 }
