@@ -23,13 +23,13 @@ export async function approveUser(profileId: string) {
   if (profile.role !== ROLES.FOUNDER && target.chapter_id !== profile.chapter_id) {
     throw new Error('Cannot approve users outside your chapter.')
   }
-  if (!target.chapter_id && profile.role === ROLES.FOUNDER) {
-    throw new Error('Cannot approve a user without an assigned chapter.')
-  }
 
+  // Incomplete stubs (auth trigger, no chapter yet) can be assigned the approver's chapter.
   const chapterIdForActivation = target.chapter_id ?? profile.chapter_id
   if (!chapterIdForActivation) {
-    throw new Error('Cannot approve a user without an assigned chapter.')
+    throw new Error(
+      'Cannot approve this member until they finish signup and choose a chapter, or you have a chapter assigned to your admin account.'
+    )
   }
 
   const { error } = await adminClient

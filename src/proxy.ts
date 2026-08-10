@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isAdminRole } from '@/lib/constants'
+import { isAdminRole, isMembershipIncomplete } from '@/lib/constants'
 import { getChapterSlugFromHost } from '@/lib/tenant'
 
 const CHAPTER_SLUG_COOKIE = 'chapter_slug'
@@ -68,13 +68,13 @@ export async function proxy(request: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, status')
+      .select('role, status, chapter_id')
       .eq('id', user.id)
       .single()
 
-    // No profile yet (OAuth or incomplete signup) — finish membership setup
+    // Stub/missing profile (auth trigger or incomplete OAuth) — finish membership setup
     if (
-      !profile &&
+      isMembershipIncomplete(profile) &&
       !isCompleteSignupRoute &&
       !isPendingRoute &&
       !isApiRoute &&
@@ -85,7 +85,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    if (profile) {
+    if (profile && !isMembershipIncomplete(profile)) {
       if (profile.status === 'suspended' && !isPendingRoute && !isApiRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/pending'
@@ -109,11 +109,12 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // Pending users on auth pages (except recovery) go to profile setup
+      // Pending users on auth pages (except recovery / complete-signup) go to profile setup
       if (
         profile.status === 'pending_approval' &&
         isAuthRoute &&
         !isPasswordRecoveryRoute &&
+        !isCompleteSignupRoute &&
         pathname !== '/auth/pending'
       ) {
         const url = request.nextUrl.clone()

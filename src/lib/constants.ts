@@ -50,6 +50,15 @@ export function isActive(status: string): boolean {
   return status === STATUS.ACTIVE
 }
 
+/** Stub from handle_new_user trigger before chapter/role onboarding finishes. */
+export function isMembershipIncomplete(profile: {
+  role: string
+  chapter_id: string | null
+} | null | undefined): boolean {
+  if (!profile) return true
+  return !profile.chapter_id || profile.role === ROLES.PENDING
+}
+
 export function isGhost(status: string): boolean {
   return status === STATUS.PENDING_APPROVAL
 }

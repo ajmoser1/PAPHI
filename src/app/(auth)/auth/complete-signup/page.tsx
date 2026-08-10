@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { ROLES, STATUS } from '@/lib/constants'
+import { ROLES, STATUS, isMembershipIncomplete } from '@/lib/constants'
 import { CompleteSignupForm } from './CompleteSignupForm'
 
 export default async function CompleteSignupPage({
@@ -21,11 +21,11 @@ export default async function CompleteSignupPage({
 
   const { data: existingProfile } = await supabase
     .from('profiles')
-    .select('status')
+    .select('status, role, chapter_id')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (existingProfile) {
+  if (existingProfile && !isMembershipIncomplete(existingProfile)) {
     if (existingProfile.status === STATUS.PENDING_APPROVAL) {
       redirect('/profile/edit')
     }

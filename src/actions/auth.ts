@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { DEFAULT_PRIVACY_SETTINGS, ROLES, STATUS } from '@/lib/constants'
+import { DEFAULT_PRIVACY_SETTINGS, ROLES, STATUS, isMembershipIncomplete } from '@/lib/constants'
 import { formatAuthErrorMessage } from '@/lib/auth-errors'
 import { getSiteOrigin } from '@/lib/site'
 
@@ -279,11 +279,11 @@ export async function completeGoogleSignup(
 
   const { data: existingProfile } = await supabase
     .from('profiles')
-    .select('status')
+    .select('status, role, chapter_id')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (existingProfile) {
+  if (existingProfile && !isMembershipIncomplete(existingProfile)) {
     if (existingProfile.status === STATUS.PENDING_APPROVAL) {
       redirect('/profile/edit')
     }

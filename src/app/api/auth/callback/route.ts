@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { STATUS } from '@/lib/constants'
+import { isMembershipIncomplete, STATUS } from '@/lib/constants'
 
 const ALLOWED_NEXT_PATHS = new Set(['/auth/reset-password'])
 
@@ -31,12 +31,12 @@ export async function GET(request: Request) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('status')
+          .select('status, role, chapter_id')
           .eq('id', user.id)
           .maybeSingle()
 
-        if (profile) {
-          if (profile.status === STATUS.PENDING_APPROVAL) {
+        if (!isMembershipIncomplete(profile)) {
+          if (profile!.status === STATUS.PENDING_APPROVAL) {
             return NextResponse.redirect(`${origin}/profile/edit`)
           }
           return NextResponse.redirect(`${origin}/members`)
