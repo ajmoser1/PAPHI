@@ -1,0 +1,26 @@
+---
+description: Keep CHANGELOG.md updated with write-ups of major product/platform changes
+alwaysApply: true
+---
+
+# Changelog write-ups
+
+After finishing a **major** change (feature, UX flow, auth/onboarding, schema migration, multi-tenant behavior, or anything a teammate would need to rediscover later), update [`CHANGELOG.md`](CHANGELOG.md) in the same session—do not wait to be asked.
+
+## What to write
+
+- Add or extend the top **`[Unreleased]`** section (or a dated section if the user asked to “release” / commit the work).
+- Newest first. Prefer **why + user impact**, then short bullets for behavior.
+- List **notable paths** (migrations, key libs/components) when helpful.
+- Include commit SHA(s) once the work is committed, if known.
+- Skip routine chores: typos, formatting-only, dependency bumps with no product impact, drive-by refactors.
+
+## What not to do
+
+- Do not dump full diffs or file-by-file noise into the changelog.
+- Do not replace `git log`; the changelog is the **product change index**.
+- Do not edit the changelog for every tiny follow-up in a long thread—batch into one Unreleased entry for that feature.
+
+## Related
+
+- Narrative / process notes stay in `promptlog.md` or `reflection.md` if used; shippable product history lives in `CHANGELOG.md`.

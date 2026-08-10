@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getOwnProfileForApp } from '@/lib/profile'
 import { MessageThread } from '@/components/messaging/MessageThread'
 
 export default async function ConversationPage({
@@ -13,12 +14,7 @@ export default async function ConversationPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: viewerProfile } = await supabase
-    .from('profiles')
-    .select('status')
-    .eq('id', user.id)
-    .single()
-
+  const viewerProfile = await getOwnProfileForApp()
   if (viewerProfile?.status === 'pending_approval') redirect('/members')
 
   const { data: conversation } = await supabase

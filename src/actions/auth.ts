@@ -20,11 +20,18 @@ const phoneSchema = z
     error: 'Enter a valid phone number with at least 10 digits.',
   })
 
+const graduationYearSchema = z.coerce
+  .number({ error: 'Graduation year is required.' })
+  .int({ error: 'Enter a valid graduation year.' })
+  .min(1950, { error: 'Enter a valid graduation year.' })
+  .max(2100, { error: 'Enter a valid graduation year.' })
+
 const registerSchema = z.object({
   firstName: z.string().min(2, { error: 'First name must be at least 2 characters.' }),
   lastName: z.string().min(2, { error: 'Last name must be at least 2 characters.' }),
   email: z.email({ error: 'Please enter a valid email.' }),
   phone: phoneSchema,
+  graduationYear: graduationYearSchema,
   password: z.string().min(8, { error: 'Password must be at least 8 characters.' }),
   role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
   inviteToken: z.string().optional(),
@@ -35,6 +42,7 @@ const completeGoogleSignupSchema = z.object({
   firstName: z.string().min(2, { error: 'First name must be at least 2 characters.' }),
   lastName: z.string().min(2, { error: 'Last name must be at least 2 characters.' }),
   phone: phoneSchema,
+  graduationYear: graduationYearSchema,
   role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
   inviteToken: z.string().optional(),
   chapterId: z.string().optional(),
@@ -94,11 +102,22 @@ async function createMemberProfile(params: {
   lastName: string
   email: string
   phone: string
+  graduationYear: number
   role: 'undergrad' | 'alumni'
   inviteToken?: string
   chapterId?: string
 }): Promise<AuthState> {
-  const { userId, firstName, lastName, email, phone, role, inviteToken, chapterId } = params
+  const {
+    userId,
+    firstName,
+    lastName,
+    email,
+    phone,
+    graduationYear,
+    role,
+    inviteToken,
+    chapterId,
+  } = params
 
   if (!inviteToken && !chapterId) {
     return {
@@ -132,6 +151,7 @@ async function createMemberProfile(params: {
       role: isChapterContact ? ROLES.CHAPTER_ADMIN : role,
       status: isChapterContact ? STATUS.ACTIVE : STATUS.PENDING_APPROVAL,
       chapter_id: resolvedChapter.id,
+      graduation_year: graduationYear,
       privacy_settings: DEFAULT_PRIVACY_SETTINGS,
     },
     { onConflict: 'id' }
@@ -149,6 +169,11 @@ async function createMemberProfile(params: {
       profile_id: userId,
       email,
       phone,
+      // Phone is collected for admin verification and starts visible so the
+      // member already meets the “at least one displayed contact” rule.
+      show_phone: true,
+      show_email: false,
+      show_linkedin: false,
     },
     { onConflict: 'profile_id' }
   )
@@ -201,6 +226,7 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     lastName: formData.get('lastName'),
     email: formData.get('email'),
     phone: formData.get('phone'),
+    graduationYear: formData.get('graduationYear'),
     password: formData.get('password'),
     role: formData.get('role'),
     inviteToken: (formData.get('inviteToken') as string) || undefined,
@@ -211,8 +237,17 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
   }
 
-  const { firstName, lastName, email, phone, password, role, inviteToken, chapterId } =
-    validated.data
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    graduationYear,
+    password,
+    role,
+    inviteToken,
+    chapterId,
+  } = validated.data
 
   const supabase = await createClient()
   const { data: signUpData, error } = await supabase.auth.signUp({
@@ -241,6 +276,7 @@ export async function register(prevState: AuthState, formData: FormData): Promis
       lastName,
       email,
       phone,
+      graduationYear,
       role,
       inviteToken,
       chapterId,
@@ -259,6 +295,7 @@ export async function completeGoogleSignup(
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
     phone: formData.get('phone'),
+    graduationYear: formData.get('graduationYear'),
     role: formData.get('role'),
     inviteToken: (formData.get('inviteToken') as string) || undefined,
     chapterId: (formData.get('chapterId') as string) || undefined,
@@ -290,13 +327,15 @@ export async function completeGoogleSignup(
     redirect('/members')
   }
 
-  const { firstName, lastName, phone, role, inviteToken, chapterId } = validated.data
+  const { firstName, lastName, phone, graduationYear, role, inviteToken, chapterId } =
+    validated.data
   const profileResult = await createMemberProfile({
     userId: user.id,
     firstName,
     lastName,
     email: user.email,
     phone,
+    graduationYear,
     role,
     inviteToken,
     chapterId,

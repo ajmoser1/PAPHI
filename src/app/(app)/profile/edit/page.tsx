@@ -1,14 +1,26 @@
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getOwnProfileRow } from '@/lib/profile'
+import { hasVisibleContact } from '@/lib/contact'
+import { STATUS } from '@/lib/constants'
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm'
 import { ContactForm } from '@/components/profile/ContactForm'
 import { PositionsSection } from '@/components/profile/PositionsSection'
 import { AvatarUpload } from '@/components/profile/AvatarUpload'
 import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm'
+import { ProfileSetupActions } from '@/components/profile/ProfileSetupActions'
+import { LinkedInImport } from '@/components/profile/LinkedInImport'
 import { Separator } from '@/components/ui/separator'
 
-export default async function ProfileEditPage() {
+export default async function ProfileEditPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const raw = await searchParams
+  const setupParam = Array.isArray(raw.setup) ? raw.setup[0] : raw.setup
+  const forceEnrichment = setupParam === '1'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
@@ -54,12 +66,34 @@ export default async function ProfileEditPage() {
     }
   }
 
+  const isPending = profile.status === STATUS.PENDING_APPROVAL
+  const needsSetup =
+    profile.status === STATUS.ACTIVE && !profile.profile_setup_completed_at
+  const showAdvancedOpen = forceEnrichment || needsSetup
+  const essentialsOnly = isPending && !showAdvancedOpen
+  const contactVisible = hasVisibleContact(contact)
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Edit Profile</h1>
-        <p className="text-muted-foreground">Update your information visible to other members.</p>
+        <h1 className="text-2xl font-bold text-primary tracking-tight">
+          {needsSetup || forceEnrichment ? 'Finish your profile' : 'Edit Profile'}
+        </h1>
+        <p className="text-muted-foreground">
+          {isPending
+            ? 'Add the essentials now. You can expand more details later after approval.'
+            : needsSetup || forceEnrichment
+              ? 'Add work details, privacy preferences, and a contact method brothers can see.'
+              : 'Update your information visible to other members.'}
+        </p>
       </div>
+
+      {(needsSetup || forceEnrichment) && (
+        <ProfileSetupActions
+          hasVisibleContact={contactVisible}
+          showFinishLater
+        />
+      )}
 
       <AvatarUpload avatarUrl={profile.avatar_url} />
 
@@ -89,19 +123,49 @@ export default async function ProfileEditPage() {
           companies={companies ?? []}
           industries={industries ?? []}
           featuredPositionId={profile.featured_position_id}
+          essentialsOnly={essentialsOnly}
         />
       </div>
+
       <Separator />
       <div>
         <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
         <ContactForm contact={contact} />
       </div>
 
-      <Separator />
-      <PrivacySettingsForm
-        visibilityScope={profile.visibility_scope ?? 'fraternity'}
-        privacySettings={profile.privacy_settings ?? {}}
-      />
+      {essentialsOnly ? (
+        <>
+          <Separator />
+          <details className="rounded-lg border bg-white group">
+            <summary className="cursor-pointer list-none px-4 py-3 font-medium text-sm flex items-center justify-between">
+              <span>Add more later</span>
+              <span className="text-muted-foreground text-xs group-open:hidden">Privacy & LinkedIn import</span>
+              <span className="text-muted-foreground text-xs hidden group-open:inline">Hide</span>
+            </summary>
+            <div className="border-t px-4 py-4 space-y-6">
+              <p className="text-sm text-muted-foreground">
+                Optional for now. After you&apos;re approved, we&apos;ll remind you to finish these.
+              </p>
+              <div className="space-y-2">
+                <h3 className="text-base font-semibold">Import from LinkedIn</h3>
+                <LinkedInImport industries={industries ?? []} />
+              </div>
+              <PrivacySettingsForm
+                visibilityScope={profile.visibility_scope ?? 'fraternity'}
+                privacySettings={profile.privacy_settings ?? {}}
+              />
+            </div>
+          </details>
+        </>
+      ) : (
+        <>
+          <Separator />
+          <PrivacySettingsForm
+            visibilityScope={profile.visibility_scope ?? 'fraternity'}
+            privacySettings={profile.privacy_settings ?? {}}
+          />
+        </>
+      )}
     </div>
   )
 }

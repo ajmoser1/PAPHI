@@ -1,6 +1,7 @@
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { SEARCH_SCOPE } from '@/lib/constants'
+import { applyUxPreviewToProfile, getUxPreviewModeForRole } from '@/lib/ux-preview'
 
 export type ChapterBranding = {
   id: string
@@ -108,7 +109,10 @@ export async function getCurrentUserProfile() {
     .eq('id', user.id)
     .single()
 
-  return profile
+  if (!profile) return null
+
+  const mode = await getUxPreviewModeForRole(profile.role)
+  return applyUxPreviewToProfile(profile, mode)
 }
 
 export async function getSearchFilters(profile: {

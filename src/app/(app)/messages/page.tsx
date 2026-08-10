@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { getOwnProfileForApp } from '@/lib/profile'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MessageSquare } from 'lucide-react'
 
@@ -9,12 +10,7 @@ export default async function MessagesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('status')
-    .eq('id', user.id)
-    .single()
-
+  const profile = await getOwnProfileForApp()
   if (profile?.status === 'pending_approval') redirect('/members')
 
   const { data: conversations } = await supabase

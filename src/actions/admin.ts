@@ -40,6 +40,8 @@ export async function approveUser(profileId: string) {
       chapter_id: chapterIdForActivation,
       visibility_scope: 'fraternity',
       search_scope: 'fraternity',
+      // Force post-approval enrichment prompt for newly approved members.
+      profile_setup_completed_at: null,
     })
     .eq('id', profileId)
 

@@ -1,9 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { isAdminRole, isMembershipIncomplete } from '@/lib/constants'
+import { isAdminRole, isMembershipIncomplete, ROLES } from '@/lib/constants'
 import { getChapterSlugFromHost } from '@/lib/tenant'
+import { resolveUxPreviewMode } from '@/lib/ux-preview'
 
 const CHAPTER_SLUG_COOKIE = 'chapter_slug'
+const UX_PREVIEW_COOKIE = 'ux_preview'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -86,22 +88,34 @@ export async function proxy(request: NextRequest) {
     }
 
     if (profile && !isMembershipIncomplete(profile)) {
+      const previewMode = resolveUxPreviewMode(
+        profile.role,
+        request.cookies.get(UX_PREVIEW_COOKIE)?.value
+      )
+      const effectiveStatus =
+        previewMode === 'pending'
+          ? 'pending_approval'
+          : previewMode === 'post_approval'
+            ? 'active'
+            : profile.status
+
       if (profile.status === 'suspended' && !isPendingRoute && !isApiRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/auth/pending'
         return NextResponse.redirect(url)
       }
 
-      // Ghost users: allow app routes but block messaging
-      if (profile.status === 'pending_approval' && isMessagesRoute) {
+      // Ghost users (or founder pending preview): allow app routes but block messaging
+      if (effectiveStatus === 'pending_approval' && isMessagesRoute) {
         const url = request.nextUrl.clone()
         url.pathname = '/members'
         return NextResponse.redirect(url)
       }
 
       // Active users on auth pages redirect to app (except password recovery)
+      // Skip when founder is previewing pending (still active in DB).
       if (
-        profile.status === 'active' &&
+        effectiveStatus === 'active' &&
         (isPendingRoute || (isAuthRoute && !isPasswordRecoveryRoute))
       ) {
         const url = request.nextUrl.clone()
@@ -111,7 +125,8 @@ export async function proxy(request: NextRequest) {
 
       // Pending users on auth pages (except recovery / complete-signup) go to profile setup
       if (
-        profile.status === 'pending_approval' &&
+        effectiveStatus === 'pending_approval' &&
+        profile.role !== ROLES.FOUNDER &&
         isAuthRoute &&
         !isPasswordRecoveryRoute &&
         !isCompleteSignupRoute &&

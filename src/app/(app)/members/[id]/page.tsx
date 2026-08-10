@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getMemberProfile, getMemberPositions } from '@/lib/members'
+import { getOwnProfileForApp } from '@/lib/profile'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -25,11 +26,7 @@ export default async function MemberProfilePage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: viewerProfile } = await supabase
-    .from('profiles')
-    .select('status, chapter_id')
-    .eq('id', user.id)
-    .single()
+  const viewerProfile = await getOwnProfileForApp()
 
   const viewerIsActive = viewerProfile?.status === 'active'
   const viewerChapterId = viewerProfile?.chapter_id ?? null
@@ -41,12 +38,17 @@ export default async function MemberProfilePage({
           <CardContent className="space-y-4 pt-6">
             <h1 className="text-xl font-semibold text-primary">Approval required</h1>
             <p className="text-sm text-muted-foreground">
-              Your account is pending chapter admin approval. You can browse members now, but profile
-              details and messaging unlock after approval.
+              Your account is pending chapter admin approval. Member profiles and messaging unlock
+              after approval.
             </p>
-            <Link href="/profile/edit" className={buttonVariants({ size: 'sm' })}>
-              Complete your profile
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/members" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+                Back to Find a Brother
+              </Link>
+              <Link href="/profile/edit" className={buttonVariants({ size: 'sm' })}>
+                Complete your profile
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserProfile, getSearchFilters } from '@/lib/tenant'
+import { getChapterAdminContacts } from '@/lib/chapter-admins'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SearchScopeToggle } from '@/components/layout/SearchScopeToggle'
+import { PendingMembersGate } from '@/components/members/PendingMembersGate'
 import { ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { STATUS } from '@/lib/constants'
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   if (value === undefined) return undefined
@@ -84,6 +87,10 @@ export default async function MembersPage({
 
   const hasFilters = !!(q || filterIndustryId || filterCompanyId || alumniOnly)
   const isFraternityWide = userProfile?.search_scope !== 'chapter'
+  const isPending = userProfile?.status === STATUS.PENDING_APPROVAL
+  const adminContacts = isPending
+    ? await getChapterAdminContacts(userProfile?.chapter_id)
+    : null
 
   return (
     <div className="space-y-6">
@@ -96,16 +103,21 @@ export default async function MembersPage({
             Find a Brother
           </h1>
           <p className="mt-2 text-muted-foreground">
-            {isFraternityWide
-              ? 'Search all SAE chapters nationwide'
-              : 'Search members in your chapter'}
+            {isPending
+              ? 'Member profiles unlock after a chapter admin approves your account.'
+              : isFraternityWide
+                ? 'Search all SAE chapters nationwide'
+                : 'Search members in your chapter'}
           </p>
         </div>
-        <div className="lg:hidden">
-          <SearchScopeToggle currentScope={userProfile?.search_scope ?? 'fraternity'} />
-        </div>
+        {!isPending && (
+          <div className="lg:hidden">
+            <SearchScopeToggle currentScope={userProfile?.search_scope ?? 'fraternity'} />
+          </div>
+        )}
       </div>
 
+      {!isPending && (
       <form method="get" className="space-y-3">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
@@ -178,19 +190,26 @@ export default async function MembersPage({
           )}
         </div>
       </form>
-
-      {hasFilters && (
-        <p className="text-sm text-muted-foreground">
-          {members.length} {members.length === 1 ? 'result' : 'results'}
-        </p>
       )}
 
-      {members.length === 0 ? (
+      {isPending && adminContacts ? (
+        <PendingMembersGate
+          members={members}
+          isFraternityWide={isFraternityWide}
+          adminContacts={adminContacts}
+        />
+      ) : members.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <p className="font-medium">{alumniOnly ? 'No alumni found' : 'No members found'}</p>
           <p className="text-sm mt-1">Try adjusting your search or filters</p>
         </div>
       ) : (
+        <>
+          {hasFilters && (
+            <p className="text-sm text-muted-foreground">
+              {members.length} {members.length === 1 ? 'result' : 'results'}
+            </p>
+          )}
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {members.map((person) => {
             const isAlumni = person.role === 'alumni'
@@ -253,6 +272,7 @@ export default async function MembersPage({
             )
           })}
         </div>
+        </>
       )}
     </div>
   )

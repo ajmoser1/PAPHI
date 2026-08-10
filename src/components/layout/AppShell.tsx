@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopNav } from './TopNav'
 import { SearchScopeToggle } from './SearchScopeToggle'
-import { PendingApprovalNotice } from './PendingApprovalNotice'
+import { PendingApprovalBanner } from './PendingApprovalBanner'
+import { PostApprovalSetupNotice } from './PostApprovalSetupNotice'
+import { UxPreviewBanner } from './UxPreviewBanner'
+import type { ChapterAdminContactsResult } from '@/lib/chapter-admins'
+import type { UxPreviewMode } from '@/lib/ux-preview'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -15,6 +19,9 @@ interface AppShellProps {
   searchScope?: string
   showFounderLink?: boolean
   unreadCount?: number
+  needsProfileSetup?: boolean
+  adminContacts?: ChapterAdminContactsResult | null
+  uxPreviewMode?: UxPreviewMode | null
 }
 
 export function AppShell({
@@ -26,6 +33,9 @@ export function AppShell({
   searchScope = 'fraternity',
   showFounderLink = false,
   unreadCount = 0,
+  needsProfileSetup = false,
+  adminContacts = null,
+  uxPreviewMode = null,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const isPending = status === 'pending_approval'
@@ -59,10 +69,18 @@ export function AppShell({
           mobileOpen={mobileOpen}
           onToggle={() => setMobileOpen((o) => !o)}
         />
+        {uxPreviewMode && <UxPreviewBanner mode={uxPreviewMode} />}
         <div className="hidden lg:flex items-center justify-end px-6 py-2 border-b bg-white/50">
           <SearchScopeToggle currentScope={searchScope} />
         </div>
-        {isPending && <PendingApprovalNotice />}
+        {isPending && adminContacts && <PendingApprovalBanner adminContacts={adminContacts} />}
+        {needsProfileSetup && (
+          <PostApprovalSetupNotice storageKey={
+            uxPreviewMode === 'post_approval'
+              ? 'post-approval-setup-dismissed:preview'
+              : 'post-approval-setup-dismissed'
+          } />
+        )}
         <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
           {children}
         </main>

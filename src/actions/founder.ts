@@ -6,6 +6,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getSiteOrigin } from '@/lib/site'
 import { formatAuthErrorMessage } from '@/lib/auth-errors'
 import { DEFAULT_PRIVACY_SETTINGS, ROLES, STATUS } from '@/lib/constants'
+import { UX_PREVIEW_COOKIE } from '@/lib/ux-preview'
 
 function splitContactName(contactName: string): { firstName: string; lastName: string } {
   const parts = contactName.trim().split(/\s+/)
@@ -308,4 +309,32 @@ export async function suspendChapter(chapterId: string) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/founder')
+}
+
+export async function setUxPreviewMode(mode: string) {
+  const { cookies } = await import('next/headers')
+  await requireFounder()
+
+  const jar = await cookies()
+  if (mode === 'off' || mode === '') {
+    jar.delete(UX_PREVIEW_COOKIE)
+  } else if (mode === 'pending' || mode === 'post_approval') {
+    jar.set(UX_PREVIEW_COOKIE, mode, {
+      path: '/',
+      sameSite: 'lax',
+      httpOnly: true,
+      maxAge: 60 * 60 * 8,
+    })
+  } else {
+    throw new Error('Invalid UX preview mode.')
+  }
+
+  revalidatePath('/', 'layout')
+  revalidatePath('/founder')
+  revalidatePath('/members')
+  revalidatePath('/profile/edit')
+}
+
+export async function clearUxPreviewMode() {
+  await setUxPreviewMode('off')
 }

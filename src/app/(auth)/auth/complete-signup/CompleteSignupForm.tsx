@@ -141,6 +141,21 @@ export function CompleteSignupForm({
               <p className="text-xs text-destructive">{state.errors.phone[0]}</p>
             )}
           </div>
+          <div className="space-y-1">
+            <Label htmlFor="graduationYear">Graduation year</Label>
+            <Input
+              id="graduationYear"
+              name="graduationYear"
+              type="number"
+              min={1950}
+              max={2100}
+              placeholder="2026"
+              required
+            />
+            {state?.errors?.graduationYear && (
+              <p className="text-xs text-destructive">{state.errors.graduationYear[0]}</p>
+            )}
+          </div>
           {canSelectChapter && (
             <div className="space-y-2">
               <div className="space-y-1">

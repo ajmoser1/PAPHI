@@ -15,6 +15,8 @@ import {
 } from '@/actions/founder'
 import { inviteRegisterUrl } from '@/lib/site'
 import { ROLES } from '@/lib/constants'
+import { getUxPreviewModeForRole } from '@/lib/ux-preview'
+import { UxPreviewPanel } from '@/components/founder/UxPreviewPanel'
 
 export default async function FounderPage() {
   const supabase = await createClient()
@@ -30,6 +32,8 @@ export default async function FounderPage() {
     .single()
 
   if (!profile || profile.role !== ROLES.FOUNDER) redirect('/members')
+
+  const uxPreviewMode = await getUxPreviewModeForRole(profile.role)
 
   const adminClient = createAdminClient()
 
@@ -97,6 +101,8 @@ export default async function FounderPage() {
           <h1 className="text-2xl font-bold">Founder Dashboard</h1>
           <p className="text-muted-foreground">Manage chapter requests and onboarding</p>
         </div>
+
+        <UxPreviewPanel currentMode={uxPreviewMode} />
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Pending Chapter Requests</h2>

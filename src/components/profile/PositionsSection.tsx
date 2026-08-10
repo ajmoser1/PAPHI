@@ -28,6 +28,8 @@ interface Props {
   companies: Company[]
   industries: Industry[]
   featuredPositionId: string | null
+  /** Hide LinkedIn import and keep the add CTA simpler (pending essentials). */
+  essentialsOnly?: boolean
 }
 
 interface PositionFormValues {
@@ -176,7 +178,13 @@ function PositionForm({
   )
 }
 
-export function PositionsSection({ positions, companies, industries, featuredPositionId }: Props) {
+export function PositionsSection({
+  positions,
+  companies,
+  industries,
+  featuredPositionId,
+  essentialsOnly = false,
+}: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -341,7 +349,9 @@ export function PositionsSection({ positions, companies, industries, featuredPos
       ) : !editingId && (
         <div className="rounded-xl border-2 border-dashed border-primary/35 bg-primary/5 p-4 space-y-3">
           <p className="text-sm font-medium text-foreground">
-            Add your work experience so brothers can find you by company and industry.
+            {essentialsOnly
+              ? 'Add at least one role so brothers can find you by company and industry.'
+              : 'Add your work experience so brothers can find you by company and industry.'}
           </p>
           <Button
             type="button"
@@ -350,14 +360,18 @@ export function PositionsSection({ positions, companies, industries, featuredPos
             onClick={() => setShowForm(true)}
           >
             <Plus className="mr-2 h-5 w-5" />
-            Add Work Experience
+            {positions.length === 0 ? 'Add Work Experience' : 'Add Another Position'}
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground">or</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-          <LinkedInImport industries={industries} />
+          {!essentialsOnly && (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+              <LinkedInImport industries={industries} />
+            </>
+          )}
         </div>
       )}
     </div>

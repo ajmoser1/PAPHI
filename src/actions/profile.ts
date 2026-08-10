@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { hasVisibleContact, VISIBLE_CONTACT_REQUIRED_MESSAGE } from '@/lib/contact'
 
 async function requireAuth() {
   const supabase = await createClient()
@@ -75,14 +76,33 @@ export async function updateContactInfo(formData: FormData) {
     return { message: 'A valid phone number with at least 10 digits is required.' }
   }
 
+  const email = ((formData.get('email') as string | null) ?? '').trim() || null
+  const linkedin_url = ((formData.get('linkedinUrl') as string | null) ?? '').trim() || null
+  const show_email = formData.get('showEmail') === 'true'
+  const show_phone = formData.get('showPhone') === 'true'
+  const show_linkedin = formData.get('showLinkedin') === 'true'
+
+  if (
+    !hasVisibleContact({
+      email,
+      phone: phoneRaw,
+      linkedin_url,
+      show_email,
+      show_phone,
+      show_linkedin,
+    })
+  ) {
+    return { message: VISIBLE_CONTACT_REQUIRED_MESSAGE }
+  }
+
   const data = {
     profile_id: userId,
-    email: formData.get('email') as string || null,
+    email,
     phone: phoneRaw,
-    linkedin_url: formData.get('linkedinUrl') as string || null,
-    show_email: formData.get('showEmail') === 'true',
-    show_phone: formData.get('showPhone') === 'true',
-    show_linkedin: formData.get('showLinkedin') === 'true',
+    linkedin_url,
+    show_email,
+    show_phone,
+    show_linkedin,
   }
 
   let { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
@@ -94,6 +114,38 @@ export async function updateContactInfo(formData: FormData) {
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
+  return { success: true }
+}
+
+export async function completeProfileSetup(_prevState: unknown, _formData: FormData) {
+  const { supabase, userId } = await requireAuth()
+
+  const { data: contact } = await supabase
+    .from('alumni_contact')
+    .select('email, phone, linkedin_url, show_email, show_phone, show_linkedin')
+    .eq('profile_id', userId)
+    .maybeSingle()
+
+  if (!hasVisibleContact(contact)) {
+    return { message: VISIBLE_CONTACT_REQUIRED_MESSAGE }
+  }
+
+  const completedAt = new Date().toISOString()
+  let { error } = await supabase
+    .from('profiles')
+    .update({ profile_setup_completed_at: completedAt })
+    .eq('id', userId)
+
+  if (error) {
+    ;({ error } = await createAdminClient()
+      .from('profiles')
+      .update({ profile_setup_completed_at: completedAt })
+      .eq('id', userId))
+  }
+
+  if (error) return { message: error.message }
+  revalidatePath('/profile/edit')
+  revalidatePath('/members')
   return { success: true }
 }
 

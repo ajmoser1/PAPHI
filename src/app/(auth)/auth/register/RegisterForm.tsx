@@ -113,6 +113,21 @@ export function RegisterForm({
             )}
           </div>
           <div className="space-y-1">
+            <Label htmlFor="graduationYear">Graduation year</Label>
+            <Input
+              id="graduationYear"
+              name="graduationYear"
+              type="number"
+              min={1950}
+              max={2100}
+              placeholder="2026"
+              required
+            />
+            {state?.errors?.graduationYear && (
+              <p className="text-xs text-destructive">{state.errors.graduationYear[0]}</p>
+            )}
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
             <Input id="password" name="password" type="password" required minLength={8} />
             <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
@@ -187,8 +202,8 @@ export function RegisterForm({
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            After registering, you&apos;ll enter the site immediately to complete your profile.
-            Messaging unlocks once a chapter admin approves your account.
+            After registering, you&apos;ll complete a short profile. Messaging and full member
+            profiles unlock once a chapter admin approves your account.
           </p>
           <Button
             type="submit"
