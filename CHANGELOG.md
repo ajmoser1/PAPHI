@@ -25,7 +25,7 @@ Signup / first-session UX overhaul + founder-only preview tooling.
 - After approval: dialog **“You’re approved — finish your profile”** → `/profile/edit?setup=1`.
 - New column `profiles.profile_setup_completed_at` (migration + grandfather existing actives).
 - Approving a member clears that field so they always get the enrichment prompt.
-- **Mark setup complete** action requires at least one **displayed** contact.
+- Setup completes automatically when the member saves contact with ≥1 method visible (no manual “Mark setup complete” control).
 
 ### Contact rule
 

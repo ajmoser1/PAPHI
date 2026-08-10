@@ -1,14 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getOwnProfileRow } from '@/lib/profile'
-import { hasVisibleContact } from '@/lib/contact'
 import { STATUS } from '@/lib/constants'
 import { ProfileEditForm } from '@/components/profile/ProfileEditForm'
 import { ContactForm } from '@/components/profile/ContactForm'
 import { PositionsSection } from '@/components/profile/PositionsSection'
 import { AvatarUpload } from '@/components/profile/AvatarUpload'
 import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm'
-import { ProfileSetupActions } from '@/components/profile/ProfileSetupActions'
 import { LinkedInImport } from '@/components/profile/LinkedInImport'
 import { Separator } from '@/components/ui/separator'
 
@@ -71,7 +69,6 @@ export default async function ProfileEditPage({
     profile.status === STATUS.ACTIVE && !profile.profile_setup_completed_at
   const showAdvancedOpen = forceEnrichment || needsSetup
   const essentialsOnly = isPending && !showAdvancedOpen
-  const contactVisible = hasVisibleContact(contact)
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -87,13 +84,6 @@ export default async function ProfileEditPage({
               : 'Update your information visible to other members.'}
         </p>
       </div>
-
-      {(needsSetup || forceEnrichment) && (
-        <ProfileSetupActions
-          hasVisibleContact={contactVisible}
-          showFinishLater
-        />
-      )}
 
       <AvatarUpload avatarUrl={profile.avatar_url} />
 

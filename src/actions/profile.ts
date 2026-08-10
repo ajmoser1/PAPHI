@@ -113,40 +113,39 @@ export async function updateContactInfo(formData: FormData) {
   }
 
   if (error) return { message: error.message }
+
+  // Quietly clear the post-approval prompt once they have a visible contact.
+  await maybeCompleteProfileSetup(userId)
+
   revalidatePath('/profile/edit')
+  revalidatePath('/members')
   return { success: true }
 }
 
-export async function completeProfileSetup(_prevState: unknown, _formData: FormData) {
-  const { supabase, userId } = await requireAuth()
+async function maybeCompleteProfileSetup(userId: string) {
+  const admin = createAdminClient()
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('status, profile_setup_completed_at')
+    .eq('id', userId)
+    .maybeSingle()
 
-  const { data: contact } = await supabase
+  if (!profile || profile.status !== 'active' || profile.profile_setup_completed_at) {
+    return
+  }
+
+  const { data: contact } = await admin
     .from('alumni_contact')
     .select('email, phone, linkedin_url, show_email, show_phone, show_linkedin')
     .eq('profile_id', userId)
     .maybeSingle()
 
-  if (!hasVisibleContact(contact)) {
-    return { message: VISIBLE_CONTACT_REQUIRED_MESSAGE }
-  }
+  if (!hasVisibleContact(contact)) return
 
-  const completedAt = new Date().toISOString()
-  let { error } = await supabase
+  await admin
     .from('profiles')
-    .update({ profile_setup_completed_at: completedAt })
+    .update({ profile_setup_completed_at: new Date().toISOString() })
     .eq('id', userId)
-
-  if (error) {
-    ;({ error } = await createAdminClient()
-      .from('profiles')
-      .update({ profile_setup_completed_at: completedAt })
-      .eq('id', userId))
-  }
-
-  if (error) return { message: error.message }
-  revalidatePath('/profile/edit')
-  revalidatePath('/members')
-  return { success: true }
 }
 
 export async function uploadAvatar(formData: FormData) {
