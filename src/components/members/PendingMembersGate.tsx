@@ -105,7 +105,7 @@ export function PendingMembersGate({
             <div className="max-w-sm rounded-xl border bg-background/95 px-5 py-4 text-center shadow-sm backdrop-blur-sm">
               <p className="font-semibold text-primary">Profiles locked until approval</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Reach out to your chapter admin if you&apos;ve been waiting a while.
+                Reach out to your chapter admin above if you&apos;ve been waiting a while.
               </p>
             </div>
           </div>

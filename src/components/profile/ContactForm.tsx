@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { updateContactInfo } from '@/actions/profile'
-import { hasVisibleContact, VISIBLE_CONTACT_REQUIRED_MESSAGE } from '@/lib/contact'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,62 +26,33 @@ export function ContactForm({ contact }: Props) {
   const [email, setEmail] = useState(contact?.email ?? '')
   const [phone, setPhone] = useState(contact?.phone ?? '')
   const [linkedinUrl, setLinkedinUrl] = useState(contact?.linkedin_url ?? '')
-  const [showEmail, setShowEmail] = useState(contact?.show_email ?? false)
-  const [showPhone, setShowPhone] = useState(contact?.show_phone ?? true)
-  const [showLinkedin, setShowLinkedin] = useState(contact?.show_linkedin ?? false)
-  const [clientError, setClientError] = useState<string | null>(null)
-
-  const canSubmit = useMemo(
-    () =>
-      hasVisibleContact({
-        email,
-        phone,
-        linkedin_url: linkedinUrl,
-        show_email: showEmail,
-        show_phone: showPhone,
-        show_linkedin: showLinkedin,
-      }),
-    [email, phone, linkedinUrl, showEmail, showPhone, showLinkedin]
-  )
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!canSubmit) {
-      setClientError(VISIBLE_CONTACT_REQUIRED_MESSAGE)
-      return
-    }
-    setClientError(null)
     const formData = new FormData(e.currentTarget)
-    formData.set('showEmail', String(showEmail))
-    formData.set('showPhone', String(showPhone))
-    formData.set('showLinkedin', String(showLinkedin))
     startTransition(async () => {
       const result = await updateContactInfo(formData)
-      if ((result as { message?: string })?.message) toast.error((result as { message: string }).message)
-      else toast.success('Contact info saved.')
+      if ((result as { message?: string })?.message) {
+        toast.error((result as { message: string }).message)
+      } else {
+        toast.success('Contact info saved.')
+      }
     })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Admins use your phone to verify you while your account is pending. At least one contact
-        method must be visible to members (email, phone, or LinkedIn).
+        Admins use your phone to verify you while your account is pending. Choose what brothers can
+        see under{' '}
+        <Link href="/settings" className="underline underline-offset-2">
+          Settings
+        </Link>
+        .
       </p>
 
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="email">Email</Label>
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showEmail}
-              onChange={(e) => setShowEmail(e.target.checked)}
-              className="accent-primary"
-            />
-            Visible to members
-          </label>
-        </div>
+        <Label htmlFor="email">Email</Label>
         <Input
           id="email"
           name="email"
@@ -93,18 +64,7 @@ export function ContactForm({ contact }: Props) {
       </div>
 
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="phone">Phone</Label>
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showPhone}
-              onChange={(e) => setShowPhone(e.target.checked)}
-              className="accent-primary"
-            />
-            Visible to members
-          </label>
-        </div>
+        <Label htmlFor="phone">Phone</Label>
         <Input
           id="phone"
           name="phone"
@@ -117,18 +77,7 @@ export function ContactForm({ contact }: Props) {
       </div>
 
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showLinkedin}
-              onChange={(e) => setShowLinkedin(e.target.checked)}
-              className="accent-primary"
-            />
-            Visible to members
-          </label>
-        </div>
+        <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
         <Input
           id="linkedinUrl"
           name="linkedinUrl"
@@ -139,12 +88,7 @@ export function ContactForm({ contact }: Props) {
         />
       </div>
 
-      {!canSubmit && (
-        <p className="text-xs text-muted-foreground">{VISIBLE_CONTACT_REQUIRED_MESSAGE}</p>
-      )}
-      {clientError && <p className="text-xs text-destructive">{clientError}</p>}
-
-      <Button type="submit" disabled={isPending || !canSubmit}>
+      <Button type="submit" disabled={isPending}>
         {isPending ? 'Saving…' : 'Save contact info'}
       </Button>
     </form>

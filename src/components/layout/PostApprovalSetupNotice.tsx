@@ -58,15 +58,31 @@ export function PostApprovalSetupNotice({
         <DialogHeader>
           <DialogTitle className="text-lg">You&apos;re approved — finish your profile</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed text-foreground/80">
-            Add work experience, privacy preferences, and at least one contact method visible to
-            members so brothers can find and reach you.
+            Add work experience and contact details so brothers can find you. Privacy and who can
+            see your contact info are in Settings.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
           <Button type="button" className="w-full" onClick={finishNow}>
             Finish profile
           </Button>
-          <Button type="button" variant="outline" className="w-full" onClick={remindLater}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              try {
+                sessionStorage.setItem(storageKey, '1')
+              } catch {
+                // ignore
+              }
+              setOpen(false)
+              router.push('/settings')
+            }}
+          >
+            Open Settings
+          </Button>
+          <Button type="button" variant="ghost" className="w-full" onClick={remindLater}>
             Remind me later
           </Button>
         </DialogFooter>

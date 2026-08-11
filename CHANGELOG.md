@@ -9,23 +9,29 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased] — 2026-08-09
 
-Signup / first-session UX overhaul + founder-only preview tooling.
-*(Working tree as of this entry; not yet a single git commit.)*
+Signup / first-session UX overhaul + founder-only preview tooling + Profile/Settings split.
+
+### Profile vs Settings
+
+- **Profile** (`/profile/edit`): avatar, basic info, work experience, contact values only.
+- **Settings** (`/settings`): privacy audiences, contact visibility toggles, default search scope, account email + password reset link.
+- Sidebar **Settings** nav item for pending and active members.
+- Top-bar All chapters / My chapter toggle kept as a shortcut to the same search-scope preference.
 
 ### Pending members (ghost) experience
 
 - **Blurred Find a Brother** while `pending_approval`: cards load but are non-clickable; clear “approval required” overlay.
-- **Chapter admin contact** for pending users (server helper bypasses RLS): name + email/phone/LinkedIn when visible, else chapter `contact_email`, else soft fallback copy.
-- Replaced one-shot pending modal with a **dismissible-per-session banner** that includes admin contact.
+- **Chapter admin contact** once on Find a Brother (email + phone + LinkedIn when available); top banner is status-only.
+- Replaced one-shot pending modal with a **dismissible-per-session banner**.
 - Member detail URL gate kept; CTAs point back to Find a Brother / profile (no “browse then surprise”).
 
 ### Profile progressive disclosure
 
-- Pending / first-run: **essentials** (avatar, basic info, work add, contact); LinkedIn import + privacy under **Add more later**.
-- After approval: dialog **“You’re approved — finish your profile”** → `/profile/edit?setup=1`.
+- Pending / first-run: **essentials** (avatar, basic info, work add, contact); LinkedIn import under **Add more later**; privacy moved to Settings.
+- After approval: dialog **“You’re approved — finish your profile”** → Profile (and Settings link).
 - New column `profiles.profile_setup_completed_at` (migration + grandfather existing actives).
 - Approving a member clears that field so they always get the enrichment prompt.
-- Setup completes automatically when the member saves contact with ≥1 method visible (no manual “Mark setup complete” control).
+- Setup completes automatically when the member saves contact with ≥1 method visible.
 
 ### Contact rule
 
@@ -45,6 +51,8 @@ Signup / first-session UX overhaul + founder-only preview tooling.
 
 ### Notable paths
 
+- `src/app/(app)/settings/page.tsx`
+- `src/components/settings/*`
 - `supabase/migrations/20260810010000_profile_setup_completed_at.sql`
 - `src/lib/chapter-admins.ts`, `src/lib/contact.ts`, `src/lib/ux-preview.ts`
 - `src/components/members/PendingMembersGate.tsx`

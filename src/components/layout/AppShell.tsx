@@ -7,7 +7,6 @@ import { SearchScopeToggle } from './SearchScopeToggle'
 import { PendingApprovalBanner } from './PendingApprovalBanner'
 import { PostApprovalSetupNotice } from './PostApprovalSetupNotice'
 import { UxPreviewBanner } from './UxPreviewBanner'
-import type { ChapterAdminContactsResult } from '@/lib/chapter-admins'
 import type { UxPreviewMode } from '@/lib/ux-preview'
 
 interface AppShellProps {
@@ -20,7 +19,6 @@ interface AppShellProps {
   showFounderLink?: boolean
   unreadCount?: number
   needsProfileSetup?: boolean
-  adminContacts?: ChapterAdminContactsResult | null
   uxPreviewMode?: UxPreviewMode | null
 }
 
@@ -34,7 +32,6 @@ export function AppShell({
   showFounderLink = false,
   unreadCount = 0,
   needsProfileSetup = false,
-  adminContacts = null,
   uxPreviewMode = null,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -73,7 +70,7 @@ export function AppShell({
         <div className="hidden lg:flex items-center justify-end px-6 py-2 border-b bg-white/50">
           <SearchScopeToggle currentScope={searchScope} />
         </div>
-        {isPending && adminContacts && <PendingApprovalBanner adminContacts={adminContacts} />}
+        {isPending && <PendingApprovalBanner />}
         {needsProfileSetup && (
           <PostApprovalSetupNotice storageKey={
             uxPreviewMode === 'post_approval'

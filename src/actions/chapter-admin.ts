@@ -62,6 +62,7 @@ export async function setSearchScope(scope: 'fraternity' | 'chapter') {
 
   if (error) throw new Error(error.message)
   revalidatePath('/members')
+  revalidatePath('/settings')
 }
 
 const privacySchema = z.object({
@@ -97,6 +98,6 @@ export async function updatePrivacySettings(formData: FormData) {
   }
 
   if (error) throw new Error(error.message)
+  revalidatePath('/settings')
   revalidatePath('/profile/edit')
-  revalidatePath('/profile/privacy')
 }

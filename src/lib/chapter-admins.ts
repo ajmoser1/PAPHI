@@ -1,13 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { ROLES } from '@/lib/constants'
 
+export type AdminContactChannel = {
+  type: 'email' | 'phone' | 'linkedin'
+  value: string
+}
+
 export type ChapterAdminContact = {
   profileId: string
   firstName: string
   lastName: string
-  /** Preferred outreach channel for pending members. */
-  contactType: 'email' | 'phone' | 'linkedin' | null
-  contactValue: string | null
+  channels: AdminContactChannel[]
 }
 
 export type ChapterAdminContactsResult = {
@@ -30,6 +33,28 @@ type AdminContactRow = {
   show_email: boolean | null
   show_phone: boolean | null
   show_linkedin: boolean | null
+}
+
+function channelsFromContact(c: AdminContactRow | undefined): AdminContactChannel[] {
+  if (!c) return []
+  const channels: AdminContactChannel[] = []
+  if (c.show_email && c.email?.trim()) {
+    channels.push({ type: 'email', value: c.email.trim() })
+  }
+  if (c.show_phone && c.phone?.trim()) {
+    channels.push({ type: 'phone', value: c.phone.trim() })
+  }
+  if (c.show_linkedin && c.linkedin_url?.trim()) {
+    channels.push({ type: 'linkedin', value: c.linkedin_url.trim() })
+  }
+  // Pending members need a way to reach admins — if nothing is marked visible,
+  // still surface stored email/phone so approval isn't a black hole.
+  if (channels.length === 0) {
+    if (c.email?.trim()) channels.push({ type: 'email', value: c.email.trim() })
+    if (c.phone?.trim()) channels.push({ type: 'phone', value: c.phone.trim() })
+    if (c.linkedin_url?.trim()) channels.push({ type: 'linkedin', value: c.linkedin_url.trim() })
+  }
+  return channels
 }
 
 /**
@@ -74,30 +99,12 @@ export async function getChapterAdminContacts(
     ((contacts ?? []) as AdminContactRow[]).map((c) => [c.profile_id, c])
   )
 
-  const admins: ChapterAdminContact[] = profiles.map((p) => {
-    const c = contactById.get(p.id)
-    let contactType: ChapterAdminContact['contactType'] = null
-    let contactValue: string | null = null
-
-    if (c?.show_email && c.email?.trim()) {
-      contactType = 'email'
-      contactValue = c.email.trim()
-    } else if (c?.show_phone && c.phone?.trim()) {
-      contactType = 'phone'
-      contactValue = c.phone.trim()
-    } else if (c?.show_linkedin && c.linkedin_url?.trim()) {
-      contactType = 'linkedin'
-      contactValue = c.linkedin_url.trim()
-    }
-
-    return {
-      profileId: p.id,
-      firstName: p.first_name ?? '',
-      lastName: p.last_name ?? '',
-      contactType,
-      contactValue,
-    }
-  })
+  const admins: ChapterAdminContact[] = profiles.map((p) => ({
+    profileId: p.id,
+    firstName: p.first_name ?? '',
+    lastName: p.last_name ?? '',
+    channels: channelsFromContact(contactById.get(p.id)),
+  }))
 
   return {
     admins,

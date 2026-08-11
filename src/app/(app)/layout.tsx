@@ -4,7 +4,6 @@ import { AppShell } from '@/components/layout/AppShell'
 import { TenantTheme } from '@/components/layout/TenantTheme'
 import { getTenantContext, getBrandingForUser } from '@/lib/tenant'
 import { getOwnProfileForApp } from '@/lib/profile'
-import { getChapterAdminContacts } from '@/lib/chapter-admins'
 import { getUxPreviewModeForRole } from '@/lib/ux-preview'
 import { ROLES, STATUS } from '@/lib/constants'
 
@@ -38,13 +37,8 @@ export default async function AppLayout({
 
   const branding = getBrandingForUser(tenant, profile, userChapter)
 
-  const isPending = profile.status === STATUS.PENDING_APPROVAL
   const needsProfileSetup =
     profile.status === STATUS.ACTIVE && !profile.profile_setup_completed_at
-
-  const adminContacts = isPending
-    ? await getChapterAdminContacts(profile.chapter_id)
-    : null
 
   const uxPreviewMode = await getUxPreviewModeForRole(profile.role)
 
@@ -59,7 +53,6 @@ export default async function AppLayout({
         searchScope={profile.search_scope ?? 'fraternity'}
         showFounderLink={profile.role === ROLES.FOUNDER}
         needsProfileSetup={needsProfileSetup}
-        adminContacts={adminContacts}
         uxPreviewMode={uxPreviewMode}
       >
         {children}

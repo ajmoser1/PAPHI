@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, MessageSquare, User, Shield, LogOut, Crown } from 'lucide-react'
+import { Users, MessageSquare, User, Shield, LogOut, Crown, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/actions/auth'
 import { isAdminRole, isGhost } from '@/lib/constants'
@@ -40,6 +40,7 @@ export function Sidebar({
       ? [{ href: '/messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> }]
       : []),
     { href: '/profile/edit', label: 'Profile', icon: <User className="h-4 w-4" /> },
+    { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
   ]
 
   if (isAdminRole(role)) {

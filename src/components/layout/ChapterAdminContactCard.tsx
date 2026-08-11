@@ -22,42 +22,55 @@ export function ChapterAdminContactCard({
     >
       <p className="font-medium">Need help getting approved?</p>
       {hasNamedAdmins ? (
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-2 space-y-3">
           {admins.map((admin) => {
             const name = `${admin.firstName} ${admin.lastName}`.trim() || 'Chapter admin'
+            const hasChannels = admin.channels.length > 0
             return (
-              <li key={admin.profileId} className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+              <li key={admin.profileId} className="space-y-1">
                 <span className="font-medium">{name}</span>
-                {admin.contactType === 'email' && admin.contactValue && (
-                  <a
-                    href={`mailto:${admin.contactValue}`}
-                    className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
-                  >
-                    <Mail className="h-3.5 w-3.5" />
-                    {admin.contactValue}
-                  </a>
-                )}
-                {admin.contactType === 'phone' && admin.contactValue && (
-                  <a
-                    href={`tel:${admin.contactValue}`}
-                    className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                    {admin.contactValue}
-                  </a>
-                )}
-                {admin.contactType === 'linkedin' && admin.contactValue && (
-                  <a
-                    href={admin.contactValue}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    LinkedIn
-                  </a>
-                )}
-                {!admin.contactType && chapterContactEmail && (
+                {hasChannels ? (
+                  <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4 sm:gap-y-1">
+                    {admin.channels.map((channel) => {
+                      if (channel.type === 'email') {
+                        return (
+                          <a
+                            key={`${admin.profileId}-email`}
+                            href={`mailto:${channel.value}`}
+                            className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                          >
+                            <Mail className="h-3.5 w-3.5" />
+                            {channel.value}
+                          </a>
+                        )
+                      }
+                      if (channel.type === 'phone') {
+                        return (
+                          <a
+                            key={`${admin.profileId}-phone`}
+                            href={`tel:${channel.value}`}
+                            className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            {channel.value}
+                          </a>
+                        )
+                      }
+                      return (
+                        <a
+                          key={`${admin.profileId}-linkedin`}
+                          href={channel.value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          LinkedIn
+                        </a>
+                      )
+                    })}
+                  </div>
+                ) : chapterContactEmail ? (
                   <a
                     href={`mailto:${chapterContactEmail}`}
                     className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
@@ -65,8 +78,7 @@ export function ChapterAdminContactCard({
                     <Mail className="h-3.5 w-3.5" />
                     {chapterContactEmail}
                   </a>
-                )}
-                {!admin.contactType && !chapterContactEmail && (
+                ) : (
                   <span className="text-amber-800/80">Ask a brother for their contact info</span>
                 )}
               </li>

@@ -78,9 +78,16 @@ export async function updateContactInfo(formData: FormData) {
 
   const email = ((formData.get('email') as string | null) ?? '').trim() || null
   const linkedin_url = ((formData.get('linkedinUrl') as string | null) ?? '').trim() || null
-  const show_email = formData.get('showEmail') === 'true'
-  const show_phone = formData.get('showPhone') === 'true'
-  const show_linkedin = formData.get('showLinkedin') === 'true'
+
+  const { data: existing } = await supabase
+    .from('alumni_contact')
+    .select('show_email, show_phone, show_linkedin')
+    .eq('profile_id', userId)
+    .maybeSingle()
+
+  const show_email = existing?.show_email ?? false
+  const show_phone = existing?.show_phone ?? true
+  const show_linkedin = existing?.show_linkedin ?? false
 
   if (
     !hasVisibleContact({
@@ -114,9 +121,66 @@ export async function updateContactInfo(formData: FormData) {
 
   if (error) return { message: error.message }
 
-  // Quietly clear the post-approval prompt once they have a visible contact.
   await maybeCompleteProfileSetup(userId)
 
+  revalidatePath('/profile/edit')
+  revalidatePath('/settings')
+  revalidatePath('/members')
+  return { success: true }
+}
+
+export async function updateContactVisibility(formData: FormData) {
+  const { supabase, userId } = await requireAuth()
+
+  const show_email = formData.get('showEmail') === 'true'
+  const show_phone = formData.get('showPhone') === 'true'
+  const show_linkedin = formData.get('showLinkedin') === 'true'
+
+  const { data: existing } = await supabase
+    .from('alumni_contact')
+    .select('email, phone, linkedin_url')
+    .eq('profile_id', userId)
+    .maybeSingle()
+
+  if (!existing) {
+    return { message: 'Add your contact details on Profile before changing visibility.' }
+  }
+
+  if (
+    !hasVisibleContact({
+      email: existing.email,
+      phone: existing.phone,
+      linkedin_url: existing.linkedin_url,
+      show_email,
+      show_phone,
+      show_linkedin,
+    })
+  ) {
+    return { message: VISIBLE_CONTACT_REQUIRED_MESSAGE }
+  }
+
+  const data = {
+    profile_id: userId,
+    email: existing.email,
+    phone: existing.phone,
+    linkedin_url: existing.linkedin_url,
+    show_email,
+    show_phone,
+    show_linkedin,
+  }
+
+  let { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
+  if (error) {
+    ;({ error } = await createAdminClient()
+      .from('alumni_contact')
+      .upsert(data, { onConflict: 'profile_id' }))
+  }
+
+  if (error) return { message: error.message }
+
+  await maybeCompleteProfileSetup(userId)
+
+  revalidatePath('/settings')
   revalidatePath('/profile/edit')
   revalidatePath('/members')
   return { success: true }

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getOwnProfileRow } from '@/lib/profile'
 import { STATUS } from '@/lib/constants'
@@ -6,7 +7,6 @@ import { ProfileEditForm } from '@/components/profile/ProfileEditForm'
 import { ContactForm } from '@/components/profile/ContactForm'
 import { PositionsSection } from '@/components/profile/PositionsSection'
 import { AvatarUpload } from '@/components/profile/AvatarUpload'
-import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm'
 import { LinkedInImport } from '@/components/profile/LinkedInImport'
 import { Separator } from '@/components/ui/separator'
 
@@ -78,10 +78,16 @@ export default async function ProfileEditPage({
         </h1>
         <p className="text-muted-foreground">
           {isPending
-            ? 'Add the essentials now. You can expand more details later after approval.'
+            ? 'Add the essentials now. Privacy and visibility live in Settings.'
             : needsSetup || forceEnrichment
-              ? 'Add work details, privacy preferences, and a contact method brothers can see.'
-              : 'Update your information visible to other members.'}
+              ? 'Add work and contact details. Adjust privacy in Settings when you are ready.'
+              : 'Update the information brothers see on your profile.'}
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">
+          <Link href="/settings" className="underline underline-offset-2">
+            Open Settings
+          </Link>{' '}
+          for privacy, contact visibility, and search preferences.
         </p>
       </div>
 
@@ -120,40 +126,45 @@ export default async function ProfileEditPage({
       <Separator />
       <div>
         <h2 className="text-lg font-semibold mb-4">Contact Information</h2>
-        <ContactForm contact={contact} />
+        <ContactForm
+          contact={
+            contact
+              ? {
+                  email: contact.email,
+                  phone: contact.phone,
+                  linkedin_url: contact.linkedin_url,
+                  show_email: contact.show_email ?? false,
+                  show_phone: contact.show_phone ?? false,
+                  show_linkedin: contact.show_linkedin ?? false,
+                }
+              : null
+          }
+        />
       </div>
 
-      {essentialsOnly ? (
+      {essentialsOnly && (
         <>
           <Separator />
           <details className="rounded-lg border bg-white group">
             <summary className="cursor-pointer list-none px-4 py-3 font-medium text-sm flex items-center justify-between">
               <span>Add more later</span>
-              <span className="text-muted-foreground text-xs group-open:hidden">Privacy & LinkedIn import</span>
+              <span className="text-muted-foreground text-xs group-open:hidden">LinkedIn import</span>
               <span className="text-muted-foreground text-xs hidden group-open:inline">Hide</span>
             </summary>
-            <div className="border-t px-4 py-4 space-y-6">
+            <div className="border-t px-4 py-4 space-y-4">
               <p className="text-sm text-muted-foreground">
-                Optional for now. After you&apos;re approved, we&apos;ll remind you to finish these.
+                Optional for now. Privacy and who can see your contact info are in{' '}
+                <Link href="/settings" className="underline underline-offset-2">
+                  Settings
+                </Link>
+                .
               </p>
               <div className="space-y-2">
                 <h3 className="text-base font-semibold">Import from LinkedIn</h3>
                 <LinkedInImport industries={industries ?? []} />
               </div>
-              <PrivacySettingsForm
-                visibilityScope={profile.visibility_scope ?? 'fraternity'}
-                privacySettings={profile.privacy_settings ?? {}}
-              />
             </div>
           </details>
-        </>
-      ) : (
-        <>
-          <Separator />
-          <PrivacySettingsForm
-            visibilityScope={profile.visibility_scope ?? 'fraternity'}
-            privacySettings={profile.privacy_settings ?? {}}
-          />
         </>
       )}
     </div>
