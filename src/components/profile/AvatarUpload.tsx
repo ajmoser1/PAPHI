@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const DEFAULT_AVATAR = '/images/default-avatar.svg'
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
 interface Props {
   avatarUrl: string | null
@@ -21,15 +22,40 @@ export function AvatarUpload({ avatarUrl }: Props) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error('Photo is too large (max 5MB). Try a smaller image.')
+      e.target.value = ''
+      return
+    }
+
+    const previousPreview = preview
     const objectUrl = URL.createObjectURL(file)
     setPreview(objectUrl)
 
     const formData = new FormData()
     formData.append('avatar', file)
     startTransition(async () => {
-      const result = await uploadAvatar(formData)
-      if ((result as any)?.message) toast.error((result as any).message)
-      else toast.success('Avatar updated.')
+      try {
+        const result = await uploadAvatar(formData)
+        if ((result as { message?: string })?.message) {
+          toast.error((result as { message: string }).message)
+          setPreview(previousPreview)
+          URL.revokeObjectURL(objectUrl)
+        } else {
+          toast.success('Avatar updated.')
+          if (result && 'url' in result && typeof result.url === 'string') {
+            setPreview(result.url)
+            URL.revokeObjectURL(objectUrl)
+          }
+        }
+      } catch {
+        toast.error('Could not upload photo. Try a smaller image.')
+        setPreview(previousPreview)
+        URL.revokeObjectURL(objectUrl)
+      } finally {
+        if (inputRef.current) inputRef.current.value = ''
+      }
     })
   }
 

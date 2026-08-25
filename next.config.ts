@@ -28,6 +28,13 @@ const cspHeader = `
   .trim();
 
 const nextConfig: NextConfig = {
+  // Avatars are capped at 5MB in uploadAvatar; default Server Action limit is 1MB
+  // and oversized bodies throw an uncaught 413 that crashes the page.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "6mb",
+    },
+  },
   async headers() {
     return [
       {
