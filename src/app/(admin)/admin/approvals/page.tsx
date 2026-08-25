@@ -4,7 +4,7 @@ import { approveUser, rejectUser, removeAcceptedProfile } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Building2, Linkedin, Mail, Phone } from 'lucide-react'
+import { Building2, ExternalLink, Mail, Phone } from 'lucide-react'
 import { ROLES } from '@/lib/constants'
 import {
   ALUMNI_CONTACT_VISIBLE_SELECT,
@@ -213,7 +213,7 @@ export default async function MembersPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Linkedin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           {linkedin ? (
                             <span className="truncate">
                               LinkedIn{contact?.show_linkedin ? '' : ' (hidden)'}
