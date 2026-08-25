@@ -257,9 +257,7 @@ export function MembersSearchBar({
 
       <div className="flex items-center gap-3">
         <SearchScopeToggle currentScope={searchScope} />
-        <span className="text-xs text-muted-foreground">
-          Switch between your chapter and all chapters
-        </span>
+        
       </div>
     </div>
   )
