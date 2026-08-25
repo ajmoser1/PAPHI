@@ -4,10 +4,18 @@ import { approveUser, rejectUser, removeAcceptedProfile } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Building2, Phone } from 'lucide-react'
+import { Building2, Linkedin, Mail, Phone } from 'lucide-react'
 import { ROLES } from '@/lib/constants'
+import {
+  ALUMNI_CONTACT_VISIBLE_SELECT,
+  CONTACT_REQUIRED_FOR_APPROVAL_MESSAGE,
+  hasVisibleContact,
+  type VisibleContactInput,
+} from '@/lib/contact'
 import { inviteRegisterUrl } from '@/lib/site'
 import { InviteLinkCard } from '@/components/admin/InviteLinkCard'
+
+type PendingContact = VisibleContactInput & { profile_id: string }
 
 type PendingProfile = {
   id: string
@@ -82,15 +90,12 @@ export default async function MembersPage() {
   const { data: contacts } = pendingIds.length
     ? await adminClient
         .from('alumni_contact')
-        .select('profile_id, phone')
+        .select(`profile_id, ${ALUMNI_CONTACT_VISIBLE_SELECT}`)
         .in('profile_id', pendingIds)
     : { data: [] }
 
-  const phoneByProfile = Object.fromEntries(
-    ((contacts ?? []) as { profile_id: string; phone: string | null }[]).map((c) => [
-      c.profile_id,
-      c.phone,
-    ])
+  const contactByProfile = Object.fromEntries(
+    ((contacts ?? []) as PendingContact[]).map((c) => [c.profile_id, c])
   )
 
   const chapterIds = [
@@ -165,12 +170,16 @@ export default async function MembersPage() {
         ) : (
           <div className="space-y-3">
             {pendingList.map((p) => {
-              const phone = phoneByProfile[p.id]
+              const contact = contactByProfile[p.id]
+              const canApprove = hasVisibleContact(contact)
               const chapterLabel = p.chapter_id ? chapterLabelById[p.chapter_id] : null
+              const email = contact?.email?.trim()
+              const phone = contact?.phone?.trim()
+              const linkedin = contact?.linkedin_url?.trim()
               return (
                 <Card key={p.id}>
                   <CardContent className="flex items-center justify-between py-4 gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium">
                         {p.first_name} {p.last_name}
                       </p>
@@ -180,13 +189,39 @@ export default async function MembersPage() {
                           Registered {new Date(p.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-2 text-sm">
-                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                        {phone ? (
-                          <span className="font-mono font-medium">{phone}</span>
-                        ) : (
-                          <span className="text-muted-foreground italic">No phone yet</span>
-                        )}
+                      <div className="mt-2 space-y-1 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          {phone ? (
+                            <span className="font-mono font-medium">
+                              {phone}
+                              {contact?.show_phone ? '' : ' (hidden)'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">No phone</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          {email ? (
+                            <span className="truncate">
+                              {email}
+                              {contact?.show_email ? '' : ' (hidden)'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">No email</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Linkedin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          {linkedin ? (
+                            <span className="truncate">
+                              LinkedIn{contact?.show_linkedin ? '' : ' (hidden)'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">No LinkedIn</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5 mt-1.5 text-sm">
                         <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
@@ -196,10 +231,15 @@ export default async function MembersPage() {
                           <span className="text-muted-foreground italic">No chapter assigned</span>
                         )}
                       </div>
+                      {!canApprove && (
+                        <p className="mt-2 text-xs text-destructive max-w-md">
+                          {CONTACT_REQUIRED_FOR_APPROVAL_MESSAGE}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0">
                       <form action={approveUser.bind(null, p.id)}>
-                        <Button type="submit" size="sm">
+                        <Button type="submit" size="sm" disabled={!canApprove}>
                           Approve
                         </Button>
                       </form>

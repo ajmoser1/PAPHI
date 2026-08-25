@@ -117,7 +117,7 @@ function PositionForm({
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor={`${formKey}-industryId`}>Industry</Label>
+          <Label htmlFor={`${formKey}-industryId`}>Career field</Label>
           <select
             id={`${formKey}-industryId`}
             name="industryId"
@@ -125,7 +125,7 @@ function PositionForm({
             onChange={(e) => setSelectedIndustryId(e.target.value)}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
           >
-            <option value="">— Select —</option>
+            <option value="">— Select field —</option>
             {industries.map((i) => (
               <option key={i.id} value={i.id}>{i.name}</option>
             ))}
@@ -350,8 +350,8 @@ export function PositionsSection({
         <div className="rounded-xl border-2 border-dashed border-primary/35 bg-primary/5 p-4 space-y-3">
           <p className="text-sm font-medium text-foreground">
             {essentialsOnly
-              ? 'Add at least one role so brothers can find you by company and industry.'
-              : 'Add your work experience so brothers can find you by company and industry.'}
+              ? 'Add at least one role so brothers can find you by company and career field.'
+              : 'Add your work experience so brothers can find you by company and career field.'}
           </p>
           <Button
             type="button"

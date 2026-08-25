@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { updateContactVisibility } from '@/actions/profile'
 import { hasVisibleContact, VISIBLE_CONTACT_REQUIRED_MESSAGE } from '@/lib/contact'
@@ -19,6 +20,7 @@ interface Contact {
 }
 
 export function ContactVisibilityForm({ contact }: { contact: Contact | null }) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showEmail, setShowEmail] = useState(contact?.show_email ?? false)
   const [showPhone, setShowPhone] = useState(contact?.show_phone ?? true)
@@ -53,6 +55,7 @@ export function ContactVisibilityForm({ contact }: { contact: Contact | null }) 
         toast.error((result as { message: string }).message)
       } else {
         toast.success('Visibility saved.')
+        router.refresh()
       }
     })
   }

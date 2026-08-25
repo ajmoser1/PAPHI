@@ -22,3 +22,10 @@ export function hasVisibleContact(contact: VisibleContactInput | null | undefine
 
 export const VISIBLE_CONTACT_REQUIRED_MESSAGE =
   'Show at least one contact method to members (email, phone, or LinkedIn).'
+
+export const CONTACT_REQUIRED_FOR_APPROVAL_MESSAGE =
+  'This member must finish signup and show at least one contact method (email, phone, or LinkedIn) before you can approve them.'
+
+/** Columns needed to evaluate the visible-contact rule. */
+export const ALUMNI_CONTACT_VISIBLE_SELECT =
+  'email, phone, linkedin_url, show_email, show_phone, show_linkedin' as const

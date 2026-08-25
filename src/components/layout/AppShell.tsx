@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopNav } from './TopNav'
-import { SearchScopeToggle } from './SearchScopeToggle'
 import { PendingApprovalBanner } from './PendingApprovalBanner'
 import { PostApprovalSetupNotice } from './PostApprovalSetupNotice'
 import { UxPreviewBanner } from './UxPreviewBanner'
@@ -15,10 +14,10 @@ interface AppShellProps {
   firstName: string
   status: string
   brandTitle?: string
-  searchScope?: string
   showFounderLink?: boolean
   unreadCount?: number
   needsProfileSetup?: boolean
+  forceVisibleContact?: boolean
   uxPreviewMode?: UxPreviewMode | null
 }
 
@@ -28,10 +27,10 @@ export function AppShell({
   firstName,
   status,
   brandTitle = 'PA PHI',
-  searchScope = 'fraternity',
   showFounderLink = false,
   unreadCount = 0,
   needsProfileSetup = false,
+  forceVisibleContact = false,
   uxPreviewMode = null,
 }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -67,16 +66,16 @@ export function AppShell({
           onToggle={() => setMobileOpen((o) => !o)}
         />
         {uxPreviewMode && <UxPreviewBanner mode={uxPreviewMode} />}
-        <div className="hidden lg:flex items-center justify-end px-6 py-2 border-b bg-white/50">
-          <SearchScopeToggle currentScope={searchScope} />
-        </div>
         {isPending && <PendingApprovalBanner />}
-        {needsProfileSetup && (
-          <PostApprovalSetupNotice storageKey={
-            uxPreviewMode === 'post_approval'
-              ? 'post-approval-setup-dismissed:preview'
-              : 'post-approval-setup-dismissed'
-          } />
+        {(forceVisibleContact || needsProfileSetup) && (
+          <PostApprovalSetupNotice
+            forceVisibleContact={forceVisibleContact}
+            storageKey={
+              uxPreviewMode === 'post_approval'
+                ? 'post-approval-setup-dismissed:preview'
+                : 'post-approval-setup-dismissed'
+            }
+          />
         )}
         <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
           {children}

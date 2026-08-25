@@ -26,12 +26,13 @@ BEGIN
     last_name := '';
   END IF;
 
+  -- Never take role from auth metadata (client-controlled).
   INSERT INTO public.profiles (id, first_name, last_name, role, status)
   VALUES (
     NEW.id,
     first_name,
     last_name,
-    COALESCE(meta->>'role', 'pending'),
+    'pending',
     'pending_approval'
   )
   ON CONFLICT (id) DO NOTHING;

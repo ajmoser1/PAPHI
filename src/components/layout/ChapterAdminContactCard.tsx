@@ -20,7 +20,7 @@ export function ChapterAdminContactCard({
         .filter(Boolean)
         .join(' ')}
     >
-      <p className="font-medium">Need help getting approved?</p>
+      <p className="font-medium">Need help getting approved? Message your chapter admin.</p>
       {hasNamedAdmins ? (
         <ul className="mt-2 space-y-3">
           {admins.map((admin) => {

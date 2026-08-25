@@ -29,6 +29,53 @@ async function updateFeaturedPosition(userId: string, positionId: string | null)
   return error
 }
 
+function companySlug(name: string) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  return `${base}-${Math.random().toString(36).slice(2, 6)}`
+}
+
+/** Find or create a company; set industry on create, or backfill if the company has none. */
+async function findOrCreateCompany(
+  companyName: string,
+  userId: string,
+  industryId: string | null
+): Promise<{ companyId?: string; message?: string }> {
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin
+    .from('companies')
+    .select('id, industry_id')
+    .ilike('name', companyName)
+    .limit(1)
+    .maybeSingle()
+
+  if (existing) {
+    if (!existing.industry_id && industryId) {
+      await admin
+        .from('companies')
+        .update({ industry_id: industryId })
+        .eq('id', existing.id)
+        .is('industry_id', null)
+    }
+    return { companyId: existing.id }
+  }
+
+  const { data: created, error: createErr } = await admin
+    .from('companies')
+    .insert({
+      name: companyName,
+      slug: companySlug(companyName),
+      status: 'active',
+      suggested_by: userId,
+      industry_id: industryId,
+    })
+    .select('id')
+    .single()
+
+  if (createErr || !created) return { message: 'Could not save company.' }
+  return { companyId: created.id }
+}
+
 const profileSchema = z.object({
   firstName: z.string().min(2, { error: 'First name required.' }),
   lastName: z.string().min(2, { error: 'Last name required.' }),
@@ -291,36 +338,12 @@ export async function createPosition(formData: FormData) {
   if (!companyName) return { message: 'Company name is required.' }
   if (!title) return { message: 'Title is required.' }
 
-  // Find or create the company using service role (bypasses RLS)
-  const { createAdminClient } = await import('@/lib/supabase/server')
-  const admin = createAdminClient()
-
-  const { data: existing } = await admin
-    .from('companies')
-    .select('id')
-    .ilike('name', companyName)
-    .limit(1)
-    .maybeSingle()
-
-  let companyId: string
-
-  if (existing) {
-    companyId = existing.id
-  } else {
-    const baseSlug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
-    const { data: created, error: createErr } = await admin
-      .from('companies')
-      .insert({ name: companyName, slug, status: 'active', suggested_by: userId })
-      .select('id')
-      .single()
-    if (createErr || !created) return { message: 'Could not save company.' }
-    companyId = created.id
-  }
+  const resolved = await findOrCreateCompany(companyName, userId, industryId)
+  if (!resolved.companyId) return { message: resolved.message ?? 'Could not save company.' }
 
   const position = {
     profile_id: userId,
-    company_id: companyId,
+    company_id: resolved.companyId,
     title,
     industry_id: industryId,
     start_year: startYear,
@@ -335,6 +358,7 @@ export async function createPosition(formData: FormData) {
     .single()
 
   if (error) {
+    const admin = createAdminClient()
     ;({ data: created, error } = await admin.from('positions').insert(position).select('id').single())
   }
 
@@ -388,34 +412,11 @@ export async function updatePosition(positionId: string, formData: FormData) {
   if (!companyName) return { message: 'Company name is required.' }
   if (!title) return { message: 'Title is required.' }
 
-  const { createAdminClient } = await import('@/lib/supabase/server')
-  const admin = createAdminClient()
-
-  const { data: existing } = await admin
-    .from('companies')
-    .select('id')
-    .ilike('name', companyName)
-    .limit(1)
-    .maybeSingle()
-
-  let companyId: string
-
-  if (existing) {
-    companyId = existing.id
-  } else {
-    const baseSlug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-    const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
-    const { data: created, error: createErr } = await admin
-      .from('companies')
-      .insert({ name: companyName, slug, status: 'active', suggested_by: userId })
-      .select('id')
-      .single()
-    if (createErr || !created) return { message: 'Could not save company.' }
-    companyId = created.id
-  }
+  const resolved = await findOrCreateCompany(companyName, userId, industryId)
+  if (!resolved.companyId) return { message: resolved.message ?? 'Could not save company.' }
 
   const updates = {
-    company_id: companyId,
+    company_id: resolved.companyId,
     title,
     industry_id: industryId,
     start_year: startYear,
@@ -430,6 +431,7 @@ export async function updatePosition(positionId: string, formData: FormData) {
     .eq('profile_id', userId)
 
   if (error) {
+    const admin = createAdminClient()
     ;({ error } = await admin
       .from('positions')
       .update(updates)

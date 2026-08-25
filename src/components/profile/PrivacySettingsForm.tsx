@@ -65,7 +65,7 @@ export function PrivacySettingsForm({ visibilityScope, privacySettings }: Props)
 
           <p className="text-sm text-muted-foreground rounded-md border bg-muted/30 px-3 py-2">
             Work experience is always visible to brothers in your fraternity so members can find you
-            by company and industry.
+            by company and career field.
           </p>
 
           <Button type="submit">Save privacy settings</Button>

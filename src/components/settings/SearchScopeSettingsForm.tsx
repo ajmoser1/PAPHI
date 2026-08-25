@@ -36,8 +36,8 @@ export function SearchScopeSettingsForm({ currentScope }: { currentScope: string
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
           <p className="text-sm text-muted-foreground">
-            Default scope for Find a Brother. You can still switch quickly from the top bar while
-            searching.
+            Default scope for Find a Brother. You can still switch quickly with the toggle under
+            the search bar.
           </p>
           <div className="space-y-2">
             <Label htmlFor="searchScope">Who do you want to search by default?</Label>

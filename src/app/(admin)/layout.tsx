@@ -33,7 +33,7 @@ export default async function AdminLayout({
           { href: '/admin/approvals', label: 'Members' },
           { href: '/admin/customize', label: 'Customize' },
           { href: '/admin/companies', label: 'Companies' },
-          { href: '/admin/industries', label: 'Industries' },
+          { href: '/admin/industries', label: 'Career fields' },
           { href: '/members', label: '← Back to app' },
         ].map(({ href, label }) => (
           <Link

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { updateContactInfo } from '@/actions/profile'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function ContactForm({ contact }: Props) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [email, setEmail] = useState(contact?.email ?? '')
   const [phone, setPhone] = useState(contact?.phone ?? '')
@@ -36,6 +38,7 @@ export function ContactForm({ contact }: Props) {
         toast.error((result as { message: string }).message)
       } else {
         toast.success('Contact info saved.')
+        router.refresh()
       }
     })
   }
@@ -48,7 +51,7 @@ export function ContactForm({ contact }: Props) {
         <Link href="/settings" className="underline underline-offset-2">
           Settings
         </Link>
-        .
+        . At least one method must be visible to members.
       </p>
 
       <div className="space-y-1">

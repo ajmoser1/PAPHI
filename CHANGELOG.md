@@ -9,14 +9,39 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased] — 2026-08-09
 
-Signup / first-session UX overhaul + founder-only preview tooling + Profile/Settings split.
+Signup / first-session UX overhaul + founder-only preview tooling + Profile/Settings split + live Find a Brother search.
+
+### Launch security hardening
+
+- Block privilege escalation: authenticated users can no longer UPDATE `profiles.role` / `status` / `chapter_id` (column grants + trigger); `handle_new_user` always seeds `pending`.
+- Contact privacy enforced in DB: peer reads go through `alumni_contact_public` (SECURITY DEFINER + masking); base-table peer SELECT policy removed.
+- Chapter `invite_token` hidden from client SELECT; invite resolution stays on service-role server paths.
+- Revoke `anon` EXECUTE on `search_members` / `search_alumni`.
+- Applied engineering career-field split on prod; documented messaging RLS in repo.
+- Notable: `supabase/migrations/20260825210000_launch_security_hardening.sql`, `20260825220000_document_messaging_rls.sql`
+
+### Companies & career fields
+
+- Member position save **sets / backfills** `companies.industry_id` when a career field is chosen (fixes industry→company filter narrowing for organically created companies).
+- Admin **Companies**: edit name/industry/website/status, soft-hide (`rejected`), restore, and **merge** duplicates (reassign positions).
+- Admin **Career fields** (renamed from Industries): rename, delete when unused; usage counts shown.
+- Split broad **Engineering** into Software / Computer / Electrical / Mechanical / Civil / Other Engineering; remap legacy rows; one-time backfill of company industries from positions (`20260825000000_split_engineering_industries.sql`).
+- Member + directory copy clarifies **Career field** (role) vs company catalog industry default.
+
+### Find a Brother — live search & sort
+
+- Filters update without a Search button: debounced text (~300ms); industry, company, alumni, and sort apply immediately.
+- Sort options: Name A–Z (default), class year oldest→newest, class year newest→oldest, chapter.
+- Company dropdown narrows when an industry is selected; result count always shown.
+- RPC: `search_members` / `search_alumni` accept `sort_by` (`20260812000000_search_members_sort_by.sql`).
+- Moved All chapters / My chapter toggle under the search filters; removed the global white top-bar strip.
+- Search input suggests company and career-field names via browser datalist.
 
 ### Profile vs Settings
 
 - **Profile** (`/profile/edit`): avatar, basic info, work experience, contact values only.
 - **Settings** (`/settings`): privacy audiences, contact visibility toggles, default search scope, account email + password reset link.
 - Sidebar **Settings** nav item for pending and active members.
-- Top-bar All chapters / My chapter toggle kept as a shortcut to the same search-scope preference.
 
 ### Pending members (ghost) experience
 
@@ -37,6 +62,9 @@ Signup / first-session UX overhaul + founder-only preview tooling + Profile/Sett
 
 - Members must show ≥1 of email / phone / LinkedIn (value + visible toggle).
 - Phone still required for admin verification; signup defaults `show_phone: true`.
+- **Approval blocked** until a visible contact exists (server check + disabled Approve in admin Members UI).
+- Failed contact save during signup rolls membership back to incomplete so stubs are not approvable.
+- Active undergrad/alumni missing a visible contact see a **non-dismissible** prompt until they add one.
 
 ### Copy / stuck states
 
@@ -51,8 +79,14 @@ Signup / first-session UX overhaul + founder-only preview tooling + Profile/Sett
 
 ### Notable paths
 
+- `src/actions/profile.ts` (company find-or-create + industry backfill)
+- `src/actions/admin.ts` (company/industry CRUD, merge, soft-hide)
+- `src/components/admin/CompanyAdminList.tsx`, `IndustryAdminList.tsx`
+- `supabase/migrations/20260825000000_split_engineering_industries.sql`
 - `src/app/(app)/settings/page.tsx`
 - `src/components/settings/*`
+- `src/components/members/MembersSearchBar.tsx`
+- `supabase/migrations/20260812000000_search_members_sort_by.sql`
 - `supabase/migrations/20260810010000_profile_setup_completed_at.sql`
 - `src/lib/chapter-admins.ts`, `src/lib/contact.ts`, `src/lib/ux-preview.ts`
 - `src/components/members/PendingMembersGate.tsx`

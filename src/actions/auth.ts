@@ -179,9 +179,21 @@ async function createMemberProfile(params: {
   )
 
   if (contactError) {
+    // Keep membership incomplete so proxy sends them back through complete-signup /
+    // profile edit instead of letting admins approve a contact-less stub.
+    await adminClient
+      .from('profiles')
+      .update({
+        role: ROLES.PENDING,
+        status: STATUS.PENDING_APPROVAL,
+        chapter_id: null,
+        graduation_year: null,
+      })
+      .eq('id', userId)
+
     return {
       message:
-        'Your account was created, but we could not save your phone number. Sign in, add your phone on your profile, then wait for admin approval.',
+        'We could not save your phone number. Try again, or sign in and finish signup with a valid phone number.',
     }
   }
 

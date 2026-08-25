@@ -17,7 +17,9 @@ export default async function ProfileEditPage({
 }) {
   const raw = await searchParams
   const setupParam = Array.isArray(raw.setup) ? raw.setup[0] : raw.setup
+  const contactParam = Array.isArray(raw.contact) ? raw.contact[0] : raw.contact
   const forceEnrichment = setupParam === '1'
+  const forceContact = contactParam === '1'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -74,14 +76,20 @@ export default async function ProfileEditPage({
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-primary tracking-tight">
-          {needsSetup || forceEnrichment ? 'Finish your profile' : 'Edit Profile'}
+          {forceContact
+            ? 'Add a visible contact method'
+            : needsSetup || forceEnrichment
+              ? 'Finish your profile'
+              : 'Edit Profile'}
         </h1>
         <p className="text-muted-foreground">
-          {isPending
-            ? 'Add the essentials now. Privacy and visibility live in Settings.'
-            : needsSetup || forceEnrichment
-              ? 'Add work and contact details. Adjust privacy in Settings when you are ready.'
-              : 'Update the information brothers see on your profile.'}
+          {forceContact
+            ? 'Brothers need at least one way to reach you. Save a phone number (visible by default), or add email/LinkedIn and turn visibility on in Settings.'
+            : isPending
+              ? 'Add the essentials now. Privacy and visibility live in Settings.'
+              : needsSetup || forceEnrichment
+                ? 'Add work and contact details. Adjust privacy in Settings when you are ready.'
+                : 'Update the information brothers see on your profile.'}
         </p>
         <p className="text-sm text-muted-foreground mt-2">
           <Link href="/settings" className="underline underline-offset-2">

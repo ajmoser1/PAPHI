@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,23 +11,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { VISIBLE_CONTACT_REQUIRED_MESSAGE } from '@/lib/contact'
 
 export function PostApprovalSetupNotice({
   storageKey = 'post-approval-setup-dismissed',
+  forceVisibleContact = false,
 }: {
   storageKey?: string
+  forceVisibleContact?: boolean
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
+  const onContactSetupPage =
+    pathname === '/profile/edit' || pathname.startsWith('/settings')
+
   useEffect(() => {
+    if (forceVisibleContact) {
+      // Allow the contact forms themselves; block the rest of the app.
+      setOpen(!onContactSetupPage)
+      return
+    }
     try {
       if (sessionStorage.getItem(storageKey) === '1') return
     } catch {
       // still show
     }
     setOpen(true)
-  }, [storageKey])
+  }, [storageKey, forceVisibleContact, onContactSetupPage])
 
   function remindLater() {
     try {
@@ -39,13 +51,15 @@ export function PostApprovalSetupNotice({
   }
 
   function finishNow() {
-    try {
-      sessionStorage.setItem(storageKey, '1')
-    } catch {
-      // ignore
+    if (!forceVisibleContact) {
+      try {
+        sessionStorage.setItem(storageKey, '1')
+      } catch {
+        // ignore
+      }
     }
     setOpen(false)
-    router.push('/profile/edit?setup=1')
+    router.push(forceVisibleContact ? '/profile/edit?contact=1' : '/profile/edit?setup=1')
   }
 
   return (
@@ -56,35 +70,44 @@ export function PostApprovalSetupNotice({
         role="alertdialog"
       >
         <DialogHeader>
-          <DialogTitle className="text-lg">You&apos;re approved — finish your profile</DialogTitle>
+          <DialogTitle className="text-lg">
+            {forceVisibleContact
+              ? 'Add a contact method brothers can see'
+              : 'You\u2019re approved — finish your profile'}
+          </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed text-foreground/80">
-            Add work experience and contact details so brothers can find you. Privacy and who can
-            see your contact info are in Settings.
+            {forceVisibleContact
+              ? VISIBLE_CONTACT_REQUIRED_MESSAGE
+              : 'Add work experience and contact details so brothers can find you. Privacy and who can see your contact info are in Settings.'}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
           <Button type="button" className="w-full" onClick={finishNow}>
-            Finish profile
+            {forceVisibleContact ? 'Add contact info' : 'Finish profile'}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              try {
-                sessionStorage.setItem(storageKey, '1')
-              } catch {
-                // ignore
-              }
-              setOpen(false)
-              router.push('/settings')
-            }}
-          >
-            Open Settings
-          </Button>
-          <Button type="button" variant="ghost" className="w-full" onClick={remindLater}>
-            Remind me later
-          </Button>
+          {!forceVisibleContact && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem(storageKey, '1')
+                  } catch {
+                    // ignore
+                  }
+                  setOpen(false)
+                  router.push('/settings')
+                }}
+              >
+                Open Settings
+              </Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={remindLater}>
+                Remind me later
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

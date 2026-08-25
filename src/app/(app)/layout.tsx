@@ -6,6 +6,10 @@ import { getTenantContext, getBrandingForUser } from '@/lib/tenant'
 import { getOwnProfileForApp } from '@/lib/profile'
 import { getUxPreviewModeForRole } from '@/lib/ux-preview'
 import { ROLES, STATUS } from '@/lib/constants'
+import {
+  ALUMNI_CONTACT_VISIBLE_SELECT,
+  hasVisibleContact,
+} from '@/lib/contact'
 
 export default async function AppLayout({
   children,
@@ -37,8 +41,25 @@ export default async function AppLayout({
 
   const branding = getBrandingForUser(tenant, profile, userChapter)
 
+  const isMemberRole =
+    profile.role === ROLES.UNDERGRAD || profile.role === ROLES.ALUMNI
+
+  const { data: contact } =
+    profile.status === STATUS.ACTIVE && isMemberRole
+      ? await supabase
+          .from('alumni_contact')
+          .select(ALUMNI_CONTACT_VISIBLE_SELECT)
+          .eq('profile_id', user.id)
+          .maybeSingle()
+      : { data: null }
+
+  const forceVisibleContact =
+    profile.status === STATUS.ACTIVE && isMemberRole && !hasVisibleContact(contact)
+
   const needsProfileSetup =
-    profile.status === STATUS.ACTIVE && !profile.profile_setup_completed_at
+    profile.status === STATUS.ACTIVE &&
+    !forceVisibleContact &&
+    !profile.profile_setup_completed_at
 
   const uxPreviewMode = await getUxPreviewModeForRole(profile.role)
 
@@ -50,9 +71,9 @@ export default async function AppLayout({
         firstName={profile.first_name ?? ''}
         status={profile.status}
         brandTitle={branding.title}
-        searchScope={profile.search_scope ?? 'fraternity'}
         showFounderLink={profile.role === ROLES.FOUNDER}
         needsProfileSetup={needsProfileSetup}
+        forceVisibleContact={forceVisibleContact}
         uxPreviewMode={uxPreviewMode}
       >
         {children}
