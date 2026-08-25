@@ -8,8 +8,11 @@ import { Input } from '@/components/ui/input'
 import { buttonVariants } from '@/components/ui/button'
 import { SearchScopeToggle } from '@/components/layout/SearchScopeToggle'
 import { cn } from '@/lib/utils'
+import {
+  type MemberSearchSort,
+} from '@/lib/member-search'
 
-export type MemberSearchSort = 'name' | 'class_asc' | 'class_desc' | 'chapter'
+export type { MemberSearchSort }
 
 type IndustryOption = { id: string; name: string }
 type CompanyOption = { id: string; name: string; industry_id: string | null }
@@ -260,11 +263,4 @@ export function MembersSearchBar({
       </div>
     </div>
   )
-}
-
-export function parseMemberSearchSort(value: string | undefined): MemberSearchSort {
-  if (value === 'class_asc' || value === 'class_desc' || value === 'chapter' || value === 'name') {
-    return value
-  }
-  return 'name'
 }

@@ -154,7 +154,7 @@ GRANT SELECT (
   accent_color,
   created_at,
   contact_email
-) ON TABLE public.chapters TO authenticated;
+) ON TABLE public.chapters TO authenticated, anon;
 
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON TABLE public.chapters FROM anon, authenticated;
 

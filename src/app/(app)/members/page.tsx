@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { PendingMembersGate } from '@/components/members/PendingMembersGate'
 import {
   MembersSearchBar,
-  parseMemberSearchSort,
 } from '@/components/members/MembersSearchBar'
+import { parseMemberSearchSort } from '@/lib/member-search'
 import { cn } from '@/lib/utils'
 import { STATUS } from '@/lib/constants'
 
