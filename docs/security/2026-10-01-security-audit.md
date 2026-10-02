@@ -4,7 +4,7 @@
 - **Author / reviewer:** amoser, with Claude Code
 - **Scope:** All of `src/` (server actions, route handlers, proxy, pages, components) and every file in `supabase/migrations/`
 - **Commit reviewed:** `8e62d84`
-- **Fix commit(s):** uncommitted at time of writing
+- **Fix commit(s):** `bb9e0c9` (app fixes, main migration, follow-up, report); avatar storage lockdown and later report updates in a follow-up commit
 - **Status:** Database migration applied to production on 2026-10-01; app changes pending deploy
 
 ## Summary
@@ -69,6 +69,7 @@ Thirteen of fifteen findings are fixed in code and in a new migration. Rate limi
 | 2026-10-01-14 | Low | `handle_new_user` `search_path` missing `pg_temp` | Fixed (pending deploy) |
 | 2026-10-01-15 | Medium–High | Prod-only `is_admin()` policies on profiles, companies, industries, positions bypass RLS | Fixed (pending deploy) |
 | 2026-10-01-16 | Low | `last_message_at` trigger never worked under RLS; clients could forge message timestamps | Fixed (pending deploy) |
+| 2026-10-01-17 | Medium | Prod storage policies let users upload any file type directly, bypassing the avatar checks | Fixed (applied to prod) |
 
 ### 2026-10-01-01: Stored XSS through chapter branding colors
 
@@ -215,6 +216,15 @@ Thirteen of fifteen findings are fixed in code and in a new migration. Rate limi
 - **Verification:** on a stub with prod's exact function and trigger, the before state reproduced 5 of 5 never updated; afterwards 0. The backfill matched each conversation's latest message, new messages update `last_message_at`, and forged `created_at`, `id` or `last_message_at` are denied. An additional ordinary trigger still aborts the script, with full rollback.
 - **Status:** Fixed (pending deploy)
 
+### 2026-10-01-17: Direct avatar uploads bypassed the server checks
+
+- **Severity:** Medium
+- **Location:** prod-only `storage.objects` policies "Users can upload own avatar" (INSERT) and "Users can update own avatar" (UPDATE) on the public `avatars` bucket; the bucket had no MIME-type or size limits
+- **Issue:** Any signed-in user could write files to their own `avatars/<uid>/` folder directly through the Storage API. That skipped the image-only checks added to `uploadAvatar` (2026-10-01-06), so SVG or HTML with script could be hosted in the public bucket.
+- **Fix:** [`20261001020000_avatar_storage_lockdown.sql`](../../supabase/migrations/20261001020000_avatar_storage_lockdown.sql) drops both policies (the app only uploads server-side with the service role) and sets bucket limits: JPEG, PNG, WebP and GIF only, 5 MB. Supabase enforces those on every upload. Viewing avatars is unaffected, because public buckets serve files without a policy.
+- **Verification:** on a storage stub with prod's exact policies, a direct `.svg` upload succeeded before and was denied by RLS after. The bucket limits were set, existing files were kept, the script can be re-run, and a missing bucket aborts. The storage service's own MIME and size enforcement can't be exercised locally.
+- **Status:** Fixed (applied to prod 2026-10-01)
+
 ### Chapter column grants and `PUBLIC`
 
 The migration review also noted that a table-level `SELECT` granted to `PUBLIC` would override the column grants on `chapters`. The migration now revokes from `PUBLIC` as well. The review also raised a `select('*')` concern; the only `select('*')` on `chapters` (`admin/customize/page.tsx`) uses the service role, so it isn't affected.
@@ -270,7 +280,7 @@ The migration review also noted that a table-level `SELECT` granted to `PUBLIC` 
   select tablename, policyname, cmd, roles, qual from pg_policies
   where schemaname = 'public' and cmd in ('SELECT','ALL') order by tablename;
   ```
-- [ ] Check the `avatars` bucket for non-image files that are already uploaded, and remove any:
+- [x] Checked the `avatars` bucket for non-image files that are already uploaded (none found):
   ```sql
   select name, metadata->>'mimetype' from storage.objects
   where bucket_id = 'avatars'
@@ -294,6 +304,8 @@ The migration review also noted that a table-level `SELECT` granted to `PUBLIC` 
   - Save privacy settings and chapter branding.
   - Send a message and approve a member.
   - Confirm a pending account sees placeholders on `/members`.
+- [x] **2026-10-01:** ran [`20261001020000_avatar_storage_lockdown.sql`](../../supabase/migrations/20261001020000_avatar_storage_lockdown.sql) on prod, then its three post-run checks. This replaces the manual bucket-settings step below. Bucket check confirmed: public, the 4 image types, 5242880 bytes. Remaining checks: 0 avatar policies left, 0 non-image files in the bucket.
+- [x] **2026-10-01:** backups: the Free plan has no Supabase backups; a manual `pg_dump` of `public` was taken and verified. Take a manual `pg_dump` of the `public` schema and store it **outside the repo** (it contains member PII).
 - [ ] Supabase dashboard settings:
   - Keep "Confirm email" **on**.
   - Minimum password length of 8 or more with complexity rules.

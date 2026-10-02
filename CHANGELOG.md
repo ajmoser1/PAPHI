@@ -21,7 +21,8 @@ Signup / first-session UX overhaul + founder-only preview tooling + Profile/Sett
 - Founder-only: reject/merge companies and rename/delete career fields (shared across all chapters).
 - `lib/auth.ts` is `server-only` (was `'use server'`); removed service-role write fallbacks; suspended accounts can't edit profiles; admin/founder guards require `status = active`.
 - Notable: `supabase/migrations/20261001000000_security_audit_fixes.sql`
-- Full report: [`docs/security/2026-10-01-security-audit.md`](docs/security/2026-10-01-security-audit.md)
+- Avatar storage lockdown: dropped client write policies on the `avatars` bucket and limited it to images up to 5 MB (`20261001020000_avatar_storage_lockdown.sql`).
+- Full report: [`docs/security/2026-10-01-security-audit.md`](docs/security/2026-10-01-security-audit.md) · commit `bb9e0c9`
 
 ### Launch security hardening
 
