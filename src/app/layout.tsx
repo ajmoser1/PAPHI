@@ -21,7 +21,19 @@ const spectral = Spectral({
   weight: ["700", "800"],
 });
 
-const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
+/**
+ * Accepts either the bare token or the full `<meta … content="…">` tag Search
+ * Console shows, since the whole tag is what people tend to copy.
+ */
+function googleVerificationToken(raw: string | undefined): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  const fromTag = /content=["']?([A-Za-z0-9_-]+)/.exec(value)?.[1];
+  const token = fromTag ?? value;
+  return /^[A-Za-z0-9_-]{20,}$/.test(token) ? token : undefined;
+}
+
+const googleSiteVerification = googleVerificationToken(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION);
 
 export const metadata: Metadata = {
   title: { default: "ChapterConnect", template: "%s · ChapterConnect" },
