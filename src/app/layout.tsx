@@ -21,9 +21,14 @@ const spectral = Spectral({
   weight: ["700", "800"],
 });
 
+const googleSiteVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
+
 export const metadata: Metadata = {
   title: { default: "ChapterConnect", template: "%s · ChapterConnect" },
   description: "Connect with your alumni",
+  // Google Search Console ownership proof, required for OAuth brand verification.
+  // Set the variable in Vercel to the `content` value from the HTML-tag method.
+  ...(googleSiteVerification ? { verification: { google: googleSiteVerification } } : {}),
 };
 
 export default function RootLayout({
