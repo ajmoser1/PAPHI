@@ -142,10 +142,6 @@ export default function PrivacyPolicyPage() {
         <li>
           <strong>Anthropic</strong> processes LinkedIn PDFs only when you choose the import feature.
         </li>
-        <li>
-          <strong>Have I Been Pwned</strong> receives a partial, one-way hash of new passwords so we can
-          reject passwords exposed in known breaches, as described under Security.
-        </li>
       </ul>
       <p>
         We may also disclose information if required by law, or to protect the rights, safety, or
@@ -188,12 +184,9 @@ export default function PrivacyPolicyPage() {
       <h2>Security</h2>
       <p>
         Data is encrypted in transit, access to member data is enforced at the database level, and only
-        approved members can view other members. When you set or change a password, we check it against
-        a list of passwords exposed in known data breaches, using the Have I Been Pwned service. Only the
-        first few characters of a one-way hash of the password are sent, never the password itself, and
-        the check cannot reveal your password. Passwords found on that list are rejected. No system is
-        perfectly secure, so please use a strong password and tell us right away if you believe your
-        account has been accessed without permission.
+        approved members can view other members. No system is perfectly secure, so please use a strong
+        password and tell us right away if you believe your account has been accessed without
+        permission.
       </p>
 
       <h2>Children</h2>

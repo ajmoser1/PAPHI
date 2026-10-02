@@ -46,10 +46,7 @@ export default function TermsPage() {
 
       <h2>3. Your account</h2>
       <ul>
-        <li>
-          You are responsible for keeping your password confidential and for activity on your account.
-          We may reject passwords that appear in known data breaches.
-        </li>
+        <li>You are responsible for keeping your password confidential and for activity on your account.</li>
         <li>Tell us promptly at {contact} if you suspect unauthorized use.</li>
         <li>One account per person. Do not share accounts or create accounts for others.</li>
       </ul>
