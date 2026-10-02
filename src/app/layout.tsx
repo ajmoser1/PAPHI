@@ -22,7 +22,7 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-  title: "ChapterConnect",
+  title: { default: "ChapterConnect", template: "%s · ChapterConnect" },
   description: "Connect with your alumni",
 };
 

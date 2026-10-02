@@ -20,9 +20,12 @@ export function TopNav({ brandTitle = 'PA PHI', mobileOpen, onToggle }: TopNavPr
         variant="ghost"
         size="icon"
         onClick={onToggle}
-        className="text-sidebar-foreground hover:bg-sidebar-accent"
+        aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={mobileOpen}
+        aria-controls="app-sidebar"
+        className="size-11 text-sidebar-foreground hover:bg-sidebar-accent"
       >
-        {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
       </Button>
       <span
         className="text-xl text-[var(--gold)]"

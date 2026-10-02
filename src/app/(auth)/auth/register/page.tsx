@@ -1,7 +1,9 @@
-import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { createAdminClient } from '@/lib/supabase/server'
 import { ROLES, STATUS } from '@/lib/constants'
 import { RegisterForm } from './RegisterForm'
+
+export const metadata: Metadata = { title: 'Create an account' }
 
 export default async function RegisterPage({
   searchParams,
@@ -47,14 +49,18 @@ export default async function RegisterPage({
     }
   }
 
+  // Only honor a token that resolved to an active chapter; otherwise fall back
+  // to the chapter list instead of a dead end at submit time.
+  const inviteValid = Boolean(invite && inviteChapter)
+
   return (
-    <Suspense fallback={<div className="text-center text-muted-foreground">Loading…</div>}>
-      <RegisterForm
-        chapters={activeChapters}
-        hasActiveChapters={activeChapters.length > 0}
-        inviteChapter={inviteChapter}
-        inviter={inviter}
-      />
-    </Suspense>
+    <RegisterForm
+      chapters={activeChapters}
+      inviteToken={inviteValid ? invite! : ''}
+      inviteBroken={Boolean(invite && !inviteChapter)}
+      inviteChapter={inviteChapter}
+      inviter={inviter}
+      fromProfileId={inviteValid ? (from ?? '') : ''}
+    />
   )
 }

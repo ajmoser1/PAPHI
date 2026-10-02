@@ -80,13 +80,15 @@ export default async function ProfileEditPage({
             ? 'Add a visible contact method'
             : needsSetup || forceEnrichment
               ? 'Finish your profile'
-              : 'Edit Profile'}
+              : isPending
+                ? 'Set up your profile'
+                : 'Edit profile'}
         </h1>
         <p className="text-muted-foreground">
           {forceContact
             ? 'Brothers need at least one way to reach you. Save a phone number (visible by default), or add email/LinkedIn and turn visibility on in Settings.'
             : isPending
-              ? 'Add the essentials now. Privacy and visibility live in Settings.'
+              ? 'A photo and your current job help your chapter admin recognize you and approve you faster. Everything here can be changed later.'
               : needsSetup || forceEnrichment
                 ? 'Add work and contact details. Adjust privacy in Settings when you are ready.'
                 : 'Update the information brothers see on your profile.'}
@@ -149,6 +151,16 @@ export default async function ProfileEditPage({
           }
         />
       </div>
+
+      {isPending && (
+        <p className="text-sm text-muted-foreground">
+          Done for now?{' '}
+          <Link href="/members" className="font-medium text-primary underline underline-offset-4">
+            Go to Find a Brother
+          </Link>{' '}
+          to see who to contact while you wait for approval.
+        </p>
+      )}
 
       {essentialsOnly && (
         <>

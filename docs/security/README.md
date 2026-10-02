@@ -9,6 +9,7 @@ Newest first. Update the **Status** column when a report's open items are resolv
 
 | Date | Report | Scope | Status |
 |---|---|---|---|
+| 2026-10-02 | [Supabase Security Advisor warnings](2026-10-02-security-advisor-warnings.md) | 15 advisor WARNs: extension placement, permissive RLS policy, SECURITY DEFINER exposure, leaked-password setting | Migration + app change pending deploy; Auth toggle pending |
 | 2026-10-01 | [Security audit: SQLi, passwords, stored procedures, full app](2026-10-01-security-audit.md) | Full codebase + Supabase migrations | DB migration applied to prod; app deploy and follow-ups pending |
 
 ## Adding a report

@@ -82,4 +82,20 @@ export const COMPANY_STATUS = {
 } as const
 
 export const PASSWORD_REQUIREMENTS_HINT =
-  'Must be at least 8 characters and include a number, an uppercase character, and a lowercase character.'
+  'At least 8 characters, with a number, an uppercase letter, and a lowercase letter.'
+
+/** Mirrors the Supabase dashboard password policy so validation fails locally, not after a round trip. */
+export const PASSWORD_RULE = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/
+
+/** Human labels for register / complete-signup fields, used by error summaries. */
+export const SIGNUP_FIELD_LABELS: Record<string, string> = {
+  firstName: 'First name',
+  lastName: 'Last name',
+  email: 'Email',
+  phone: 'Phone',
+  graduationYear: 'Graduation year',
+  password: 'Password',
+  confirmPassword: 'Confirm password',
+  chapterId: 'Chapter',
+  role: 'Undergrad or graduated',
+}

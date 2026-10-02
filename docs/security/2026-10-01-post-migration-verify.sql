@@ -90,8 +90,10 @@ checks(n, check_name, expected, actual) as (
      where oid = 'public.search_members(text, uuid, uuid, boolean, uuid, uuid, uuid, integer, integer, text)'::regprocedure)
   union all
   select 11, 'Visibility helpers exist', 'viewer_is_active, can_message',
+    -- 20261002000000 moved these from public to private; either location passes.
     (select string_agg(proname, ', ' order by proname desc) from pg_proc
-     where pronamespace = 'public'::regnamespace and proname in ('viewer_is_active','can_message'))
+     where pronamespace in ('public'::regnamespace, to_regnamespace('private'))
+       and proname in ('viewer_is_active','can_message'))
   union all
   select 12, 'Message length cap installed', 'present',
     coalesce((select 'present' from pg_constraint

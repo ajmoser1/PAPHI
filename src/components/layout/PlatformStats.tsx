@@ -1,10 +1,32 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type { PlatformStats as PlatformStatsData } from '@/lib/stats'
 
 const POLL_INTERVAL_MS = 15_000
+const STATS_ENDPOINT = '/api/platform-stats'
+
+function toCount(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+async function fetchPlatformStats(): Promise<PlatformStatsData | null> {
+  try {
+    const res = await fetch(STATS_ENDPOINT, { cache: 'no-store' })
+    if (!res.ok) return null
+    const body: unknown = await res.json()
+    if (!body || typeof body !== 'object') return null
+    const row = body as Record<string, unknown>
+    const userCount = toCount(row.userCount)
+    const chapterCount = toCount(row.chapterCount)
+    const companyCount = toCount(row.companyCount)
+    if (userCount == null || chapterCount == null || companyCount == null) return null
+    return { userCount, chapterCount, companyCount }
+  } catch {
+    return null
+  }
+}
 
 type PlatformStatsProps = {
   initialStats: PlatformStatsData
@@ -22,22 +44,15 @@ export function PlatformStats({ initialStats }: PlatformStatsProps) {
   }, [initialStats])
 
   useEffect(() => {
-    const supabase = createClient()
     let cancelled = false
     let intervalId: ReturnType<typeof setInterval> | null = null
 
     async function refresh() {
       if (document.visibilityState !== 'visible') return
 
-      const { data, error } = await supabase.rpc('get_platform_stats')
-      if (cancelled || error || !data?.[0]) return
-
-      const row = data[0]
-      setStats({
-        userCount: Number(row.user_count ?? 0),
-        chapterCount: Number(row.chapter_count ?? 0),
-        companyCount: Number(row.company_count ?? 0),
-      })
+      const next = await fetchPlatformStats()
+      if (cancelled || !next) return
+      setStats(next)
     }
 
     function startPolling() {

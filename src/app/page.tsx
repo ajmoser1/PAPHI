@@ -8,6 +8,19 @@ import { AffiliationBranding } from '@/components/layout/AffiliationBranding'
 import { CrestBackground } from '@/components/layout/CrestBackground'
 import { PlatformStats } from '@/components/layout/PlatformStats'
 
+function LegalLinks() {
+  return (
+    <nav aria-label="Legal" className="mt-6 flex items-center gap-4 text-xs text-muted-foreground">
+      <Link href="/privacy" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-primary hover:underline">
+        Privacy Policy
+      </Link>
+      <Link href="/terms" className="inline-flex min-h-11 items-center underline-offset-4 hover:text-primary hover:underline">
+        Terms of Service
+      </Link>
+    </nav>
+  )
+}
+
 export default async function Home() {
   const [tenant, stats] = await Promise.all([getTenantContext(), getPlatformStats()])
 
@@ -41,6 +54,7 @@ export default async function Home() {
           <div className="flex flex-col items-center">
             <AffiliationBranding />
             <PlatformStats initialStats={stats} />
+            <LegalLinks />
           </div>
         </main>
       </div>
@@ -79,6 +93,7 @@ export default async function Home() {
             <div className="flex flex-col items-center">
               <AffiliationBranding schoolName={chapter.school_name} />
               <PlatformStats initialStats={stats} />
+              <LegalLinks />
             </div>
           </section>
         </main>

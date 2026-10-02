@@ -1,15 +1,39 @@
-import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ROLES, STATUS, isMembershipIncomplete } from '@/lib/constants'
-import { CompleteSignupForm } from './CompleteSignupForm'
+import { CompleteSignupForm, type SignupPrefill } from './CompleteSignupForm'
+
+export const metadata: Metadata = { title: 'Tell us about yourself' }
+
+function metaString(meta: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const v = meta[key]
+    if (typeof v === 'string' && v.trim()) return v.trim()
+    if (typeof v === 'number' && Number.isFinite(v)) return String(v)
+  }
+  return ''
+}
+
+/** Name from Google (given/family) or from our own signup metadata; falls back to splitting a full name. */
+function nameFromMetadata(meta: Record<string, unknown>): { firstName: string; lastName: string } {
+  const given = metaString(meta, 'given_name', 'first_name')
+  const family = metaString(meta, 'family_name', 'last_name')
+  if (given || family) return { firstName: given, lastName: family }
+
+  const full = metaString(meta, 'full_name', 'name')
+  const parts = full.split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { firstName: '', lastName: '' }
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' }
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') }
+}
 
 export default async function CompleteSignupPage({
   searchParams,
 }: {
   searchParams: Promise<{ invite?: string; from?: string }>
 }) {
-  const { invite, from } = await searchParams
+  const params = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -31,6 +55,14 @@ export default async function CompleteSignupPage({
     }
     redirect('/members')
   }
+
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>
+  const provider = (user.app_metadata?.provider as string | undefined) ?? 'email'
+
+  // The URL wins; otherwise reuse the invite token saved when they registered,
+  // so an email-confirmation round trip does not lose their chapter.
+  const invite = params.invite || metaString(meta, 'signup_invite_token') || undefined
+  const from = params.from
 
   const adminClient = createAdminClient()
   const { data: chapters } = await adminClient
@@ -69,16 +101,25 @@ export default async function CompleteSignupPage({
     }
   }
 
+  const inviteValid = Boolean(invite && inviteChapter)
+  const prefill: SignupPrefill = {
+    ...nameFromMetadata(meta),
+    phone: metaString(meta, 'signup_phone'),
+    graduationYear: metaString(meta, 'signup_graduation_year'),
+    role: metaString(meta, 'signup_role'),
+    chapterId: metaString(meta, 'signup_chapter_id'),
+  }
+
   return (
-    <Suspense fallback={<div className="text-center text-muted-foreground">Loading…</div>}>
-      <CompleteSignupForm
-        email={user.email}
-        userMetadata={(user.user_metadata ?? {}) as Record<string, unknown>}
-        chapters={activeChapters}
-        hasActiveChapters={activeChapters.length > 0}
-        inviteChapter={inviteChapter}
-        inviter={inviter}
-      />
-    </Suspense>
+    <CompleteSignupForm
+      email={user.email}
+      provider={provider}
+      prefill={prefill}
+      chapters={activeChapters}
+      inviteToken={inviteValid ? invite! : ''}
+      inviteBroken={Boolean(invite && !inviteChapter)}
+      inviteChapter={inviteChapter}
+      inviter={inviter}
+    />
   )
 }

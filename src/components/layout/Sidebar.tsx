@@ -54,7 +54,7 @@ export function Sidebar({
   const shortTitle = brandTitle.length > 12 ? brandTitle.split(' ').slice(-2).join(' ') : brandTitle
 
   return (
-    <aside className="flex flex-col w-60 bg-sidebar h-full p-4 gap-1">
+    <aside id="app-sidebar" aria-label="Main navigation" className="flex flex-col w-60 bg-sidebar h-full p-4 gap-1">
       <div className="px-3 pt-2 pb-5">
         <span
           className="text-xl text-[var(--gold)] tracking-wide uppercase line-clamp-2"

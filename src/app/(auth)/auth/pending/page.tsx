@@ -1,10 +1,14 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getOwnProfileForApp } from '@/lib/profile'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { RetryButton } from '@/components/auth/RetryButton'
 import { logout } from '@/actions/auth'
 import { STATUS } from '@/lib/constants'
+
+export const metadata: Metadata = { title: 'Account status' }
 
 export default async function PendingPage() {
   const supabase = await createClient()
@@ -27,7 +31,7 @@ export default async function PendingPage() {
       return (
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Account not approved</CardTitle>
+            <CardTitle as="h1" className="text-xl">Account not approved</CardTitle>
             <CardDescription>
               Your membership request was not approved, or your account has been suspended.
               Contact your chapter admin if you think this is a mistake.
@@ -35,7 +39,7 @@ export default async function PendingPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <form action={logout}>
-              <Button type="submit" variant="outline" className="w-full">
+              <Button type="submit" variant="outline" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm">
                 Sign out
               </Button>
             </form>
@@ -48,16 +52,16 @@ export default async function PendingPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle>Finishing account setup</CardTitle>
+        <CardTitle as="h1" className="text-xl">Finishing account setup</CardTitle>
         <CardDescription>
-          We&apos;re still setting up your account. Please wait a moment and refresh, or sign out
-          and try again.
+          We&apos;re still setting up your account. This usually takes a few seconds.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        <RetryButton label="Check again" />
         <form action={logout}>
-          <Button type="submit" variant="outline" className="w-full">
-            Sign out
+          <Button type="submit" variant="ghost" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm">
+            Sign out and try later
           </Button>
         </form>
       </CardContent>

@@ -3,69 +3,110 @@
 import { redirect } from 'next/navigation'
 import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { DEFAULT_PRIVACY_SETTINGS, ROLES, STATUS, isMembershipIncomplete } from '@/lib/constants'
-import { formatAuthErrorMessage } from '@/lib/auth-errors'
+import {
+  DEFAULT_PRIVACY_SETTINGS,
+  PASSWORD_REQUIREMENTS_HINT,
+  PASSWORD_RULE,
+  ROLES,
+  STATUS,
+  isMembershipIncomplete,
+} from '@/lib/constants'
+import { classifyAuthError, formatAuthErrorMessage, type AuthErrorCode } from '@/lib/auth-errors'
 import { getSiteOrigin } from '@/lib/site'
 
+const passwordSchema = z
+  .string()
+  .min(8, { error: 'Password must be at least 8 characters.' })
+  .regex(PASSWORD_RULE, { error: PASSWORD_REQUIREMENTS_HINT })
+
 const loginSchema = z.object({
-  email: z.email({ error: 'Please enter a valid email.' }),
-  password: z.string().min(6, { error: 'Password must be at least 6 characters.' }),
+  email: z.email({ error: 'Enter the email you registered with.' }),
+  password: z.string().min(1, { error: 'Enter your password.' }),
 })
 
 const phoneSchema = z
   .string()
   .trim()
-  .min(1, { error: 'Phone number is required.' })
+  .min(1, { error: 'Enter a phone number so your chapter admin can verify you.' })
   .refine((value) => value.replace(/\D/g, '').length >= 10, {
-    error: 'Enter a valid phone number with at least 10 digits.',
+    error: 'Enter a phone number with at least 10 digits, like 412 555 0100.',
   })
 
 const graduationYearSchema = z.coerce
-  .number({ error: 'Graduation year is required.' })
-  .int({ error: 'Enter a valid graduation year.' })
-  .min(1950, { error: 'Enter a valid graduation year.' })
-  .max(2100, { error: 'Enter a valid graduation year.' })
+  .number({ error: 'Enter your graduation year (or expected year).' })
+  .int({ error: 'Enter a four-digit year.' })
+  .min(1950, { error: 'Enter a year between 1950 and 2100.' })
+  .max(2100, { error: 'Enter a year between 1950 and 2100.' })
+
+const nameSchema = (label: string) =>
+  z.string().trim().min(1, { error: `Enter your ${label}.` }).max(80, { error: `${label} is too long.` })
+
+const roleSchema = z.enum(['undergrad', 'alumni'], {
+  error: 'Choose whether you are a current undergrad or a graduate.',
+})
 
 const registerSchema = z.object({
-  firstName: z.string().min(2, { error: 'First name must be at least 2 characters.' }),
-  lastName: z.string().min(2, { error: 'Last name must be at least 2 characters.' }),
-  email: z.email({ error: 'Please enter a valid email.' }),
+  firstName: nameSchema('first name'),
+  lastName: nameSchema('last name'),
+  email: z.email({ error: 'Enter a valid email address.' }),
   phone: phoneSchema,
   graduationYear: graduationYearSchema,
-  password: z.string().min(8, { error: 'Password must be at least 8 characters.' }),
-  role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
+  password: passwordSchema,
+  role: roleSchema,
   inviteToken: z.string().optional(),
   chapterId: z.string().optional(),
 })
 
-const completeGoogleSignupSchema = z.object({
-  firstName: z.string().min(2, { error: 'First name must be at least 2 characters.' }),
-  lastName: z.string().min(2, { error: 'Last name must be at least 2 characters.' }),
+const completeSignupSchema = z.object({
+  firstName: nameSchema('first name'),
+  lastName: nameSchema('last name'),
   phone: phoneSchema,
   graduationYear: graduationYearSchema,
-  role: z.enum(['undergrad', 'alumni'], { error: 'Please select a role.' }),
+  role: roleSchema,
   inviteToken: z.string().optional(),
   chapterId: z.string().optional(),
 })
 
 const forgotPasswordSchema = z.object({
-  email: z.email({ error: 'Please enter a valid email.' }),
+  email: z.email({ error: 'Enter the email you registered with.' }),
 })
 
 const resetPasswordSchema = z
   .object({
-    password: z.string().min(8, { error: 'Password must be at least 8 characters.' }),
-    confirmPassword: z.string().min(8, { error: 'Please confirm your password.' }),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, { error: 'Type your new password again.' }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match.',
+    message: 'The two passwords do not match.',
     path: ['confirmPassword'],
   })
 
-export type AuthState = {
-  errors?: Record<string, string[]>
-  message?: string
-} | undefined
+export type AuthState =
+  | {
+      errors?: Record<string, string[]>
+      /** Form-level message, shown in the focused alert above the form. */
+      message?: string
+      /** True when `message` is a success / next-step notice rather than an error. */
+      success?: boolean
+      /** Lets the form offer a recovery action (resend confirmation, sign in, new link). */
+      code?: AuthErrorCode
+      /** Submitted values so the form can repopulate after React resets it. Never includes passwords. */
+      values?: Record<string, string>
+    }
+  | undefined
+
+function fieldErrors(error: z.ZodError): Record<string, string[]> {
+  return z.flattenError(error).fieldErrors as Record<string, string[]>
+}
+
+function str(formData: FormData, key: string): string {
+  const v = formData.get(key)
+  return typeof v === 'string' ? v : ''
+}
+
+function pickValues(formData: FormData, keys: string[]): Record<string, string> {
+  return Object.fromEntries(keys.map((k) => [k, str(formData, k)]))
+}
 
 type ResolvedChapter = { id: string; contactEmail: string | null }
 
@@ -107,21 +148,11 @@ async function createMemberProfile(params: {
   inviteToken?: string
   chapterId?: string
 }): Promise<AuthState> {
-  const {
-    userId,
-    firstName,
-    lastName,
-    email,
-    phone,
-    graduationYear,
-    role,
-    inviteToken,
-    chapterId,
-  } = params
+  const { userId, firstName, lastName, email, phone, graduationYear, role, inviteToken, chapterId } = params
 
   if (!inviteToken && !chapterId) {
     return {
-      message: 'Please select your chapter or use an invite link from your chapter admin.',
+      errors: { chapterId: ['Choose your chapter, or open the invite link your chapter admin sent you.'] },
     }
   }
 
@@ -130,17 +161,16 @@ async function createMemberProfile(params: {
     if (inviteToken) {
       return {
         message:
-          'This invite link is invalid or the chapter is not active. Ask your chapter admin for a current invite link.',
+          'That invite link has expired or is not valid any more. Ask your chapter admin for a current link, or pick your chapter from the list.',
       }
     }
     return {
-      message: 'Selected chapter is unavailable. Choose another chapter or request your chapter first.',
+      errors: { chapterId: ['That chapter is not available right now. Choose another, or request yours.'] },
     }
   }
 
   const isChapterContact =
-    !!resolvedChapter.contactEmail &&
-    resolvedChapter.contactEmail.toLowerCase() === email.toLowerCase()
+    !!resolvedChapter.contactEmail && resolvedChapter.contactEmail.toLowerCase() === email.toLowerCase()
 
   const adminClient = createAdminClient()
   const { error: profileError } = await adminClient.from('profiles').upsert(
@@ -160,7 +190,7 @@ async function createMemberProfile(params: {
   if (profileError) {
     return {
       message:
-        'Your account was created, but profile setup did not finish. Try signing in again, and contact support if this keeps happening.',
+        'Your account was created, but we could not finish setting up your profile. Sign in and try again, and contact your chapter admin if it keeps happening.',
     }
   }
 
@@ -170,7 +200,7 @@ async function createMemberProfile(params: {
       email,
       phone,
       // Phone is collected for admin verification and starts visible so the
-      // member already meets the “at least one displayed contact” rule.
+      // member already meets the "at least one displayed contact" rule.
       show_phone: true,
       show_email: false,
       show_linkedin: false,
@@ -192,8 +222,7 @@ async function createMemberProfile(params: {
       .eq('id', userId)
 
     return {
-      message:
-        'We could not save your phone number. Try again, or sign in and finish signup with a valid phone number.',
+      errors: { phone: ['We could not save this phone number. Check it and try again.'] },
     }
   }
 
@@ -201,20 +230,21 @@ async function createMemberProfile(params: {
 }
 
 export async function login(prevState: AuthState, formData: FormData): Promise<AuthState> {
+  const values = pickValues(formData, ['email'])
   const validated = loginSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
   })
 
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+    return { errors: fieldErrors(validated.error), values }
   }
 
   const supabase = await createClient()
   const { data: authData, error } = await supabase.auth.signInWithPassword(validated.data)
 
   if (error) {
-    return { message: formatAuthErrorMessage(error.message) }
+    return { message: formatAuthErrorMessage(error.message), code: classifyAuthError(error.message), values }
   }
 
   if (authData.user) {
@@ -232,7 +262,10 @@ export async function login(prevState: AuthState, formData: FormData): Promise<A
   redirect('/members')
 }
 
+const REGISTER_VALUE_KEYS = ['firstName', 'lastName', 'email', 'phone', 'graduationYear', 'role', 'chapterId']
+
 export async function register(prevState: AuthState, formData: FormData): Promise<AuthState> {
+  const values = pickValues(formData, REGISTER_VALUE_KEYS)
   const validated = registerSchema.safeParse({
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
@@ -241,43 +274,59 @@ export async function register(prevState: AuthState, formData: FormData): Promis
     graduationYear: formData.get('graduationYear'),
     password: formData.get('password'),
     role: formData.get('role'),
-    inviteToken: (formData.get('inviteToken') as string) || undefined,
-    chapterId: (formData.get('chapterId') as string) || undefined,
+    inviteToken: str(formData, 'inviteToken') || undefined,
+    chapterId: str(formData, 'chapterId') || undefined,
   })
 
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+    return { errors: fieldErrors(validated.error), values }
   }
 
-  const {
-    firstName,
-    lastName,
-    email,
-    phone,
-    graduationYear,
-    password,
-    role,
-    inviteToken,
-    chapterId,
-  } = validated.data
+  const { firstName, lastName, email, phone, graduationYear, password, role, inviteToken, chapterId } =
+    validated.data
+
+  if (!inviteToken && !chapterId) {
+    return {
+      errors: { chapterId: ['Choose your chapter, or open the invite link your chapter admin sent you.'] },
+      values,
+    }
+  }
+
+  // If email confirmation is on, the confirmation link lands on our callback.
+  // Carrying the invite token keeps the chapter pre-selected on the way back.
+  const callback = new URL('/api/auth/callback', getSiteOrigin())
+  if (inviteToken) callback.searchParams.set('invite', inviteToken)
 
   const supabase = await createClient()
   const { data: signUpData, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { first_name: firstName, last_name: lastName, role },
+      emailRedirectTo: callback.toString(),
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        // Prefill-only hints for complete-signup after email confirmation.
+        // Server actions re-validate every one of these; handle_new_user
+        // ignores them by design (role/status are never taken from metadata).
+        signup_phone: phone,
+        signup_graduation_year: graduationYear,
+        signup_role: role,
+        signup_chapter_id: chapterId ?? null,
+        signup_invite_token: inviteToken ?? null,
+      },
     },
   })
 
   if (error) {
-    return { message: formatAuthErrorMessage(error.message) }
+    return { message: formatAuthErrorMessage(error.message), code: classifyAuthError(error.message), values }
   }
 
   if (!signUpData.session) {
     return {
-      message:
-        'Check your email to confirm your account, then sign in to complete your profile.',
+      success: true,
+      message: `We sent a confirmation link to ${email}. Open it to finish creating your account. We saved what you entered, so you won't have to type it again.`,
+      values,
     }
   }
 
@@ -293,28 +342,28 @@ export async function register(prevState: AuthState, formData: FormData): Promis
       inviteToken,
       chapterId,
     })
-    if (profileResult) return profileResult
+    if (profileResult) return { ...profileResult, values }
   }
 
   redirect('/profile/edit')
 }
 
-export async function completeGoogleSignup(
-  prevState: AuthState,
-  formData: FormData
-): Promise<AuthState> {
-  const validated = completeGoogleSignupSchema.safeParse({
+const COMPLETE_VALUE_KEYS = ['firstName', 'lastName', 'phone', 'graduationYear', 'role', 'chapterId']
+
+export async function completeSignup(prevState: AuthState, formData: FormData): Promise<AuthState> {
+  const values = pickValues(formData, COMPLETE_VALUE_KEYS)
+  const validated = completeSignupSchema.safeParse({
     firstName: formData.get('firstName'),
     lastName: formData.get('lastName'),
     phone: formData.get('phone'),
     graduationYear: formData.get('graduationYear'),
     role: formData.get('role'),
-    inviteToken: (formData.get('inviteToken') as string) || undefined,
-    chapterId: (formData.get('chapterId') as string) || undefined,
+    inviteToken: str(formData, 'inviteToken') || undefined,
+    chapterId: str(formData, 'chapterId') || undefined,
   })
 
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+    return { errors: fieldErrors(validated.error), values }
   }
 
   const supabase = await createClient()
@@ -323,7 +372,7 @@ export async function completeGoogleSignup(
   } = await supabase.auth.getUser()
 
   if (!user?.email) {
-    return { message: 'Your Google session expired. Please sign in again.' }
+    return { message: 'Your session expired. Sign in again to continue.', code: 'link_expired', values }
   }
 
   const { data: existingProfile } = await supabase
@@ -339,8 +388,7 @@ export async function completeGoogleSignup(
     redirect('/members')
   }
 
-  const { firstName, lastName, phone, graduationYear, role, inviteToken, chapterId } =
-    validated.data
+  const { firstName, lastName, phone, graduationYear, role, inviteToken, chapterId } = validated.data
   const profileResult = await createMemberProfile({
     userId: user.id,
     firstName,
@@ -352,21 +400,19 @@ export async function completeGoogleSignup(
     inviteToken,
     chapterId,
   })
-  if (profileResult) return profileResult
+  if (profileResult) return { ...profileResult, values }
 
   redirect('/profile/edit')
 }
 
-export async function requestPasswordReset(
-  prevState: AuthState,
-  formData: FormData
-): Promise<AuthState> {
+export async function requestPasswordReset(prevState: AuthState, formData: FormData): Promise<AuthState> {
+  const values = pickValues(formData, ['email'])
   const validated = forgotPasswordSchema.safeParse({
     email: formData.get('email'),
   })
 
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+    return { errors: fieldErrors(validated.error), values }
   }
 
   const supabase = await createClient()
@@ -376,8 +422,9 @@ export async function requestPasswordReset(
   })
 
   return {
-    message:
-      'If an account exists for that email, you will receive a password reset link shortly.',
+    success: true,
+    message: `If there is an account for ${validated.data.email}, a reset link is on its way. Check your spam folder if it does not arrive in a few minutes.`,
+    values,
   }
 }
 
@@ -388,17 +435,37 @@ export async function resetPassword(prevState: AuthState, formData: FormData): P
   })
 
   if (!validated.success) {
-    return { errors: validated.error.flatten().fieldErrors as Record<string, string[]> }
+    return { errors: fieldErrors(validated.error) }
   }
 
   const supabase = await createClient()
   const { error } = await supabase.auth.updateUser({ password: validated.data.password })
 
   if (error) {
-    return { message: formatAuthErrorMessage(error.message) }
+    return { message: formatAuthErrorMessage(error.message), code: classifyAuthError(error.message) }
   }
 
   redirect('/members')
+}
+
+/** Re-send the signup confirmation email. Response is the same whether or not the address exists. */
+export async function resendConfirmation(prevState: AuthState, formData: FormData): Promise<AuthState> {
+  const validated = forgotPasswordSchema.safeParse({ email: formData.get('email') })
+  if (!validated.success) {
+    return { errors: fieldErrors(validated.error) }
+  }
+
+  const supabase = await createClient()
+  await supabase.auth.resend({
+    type: 'signup',
+    email: validated.data.email,
+    options: { emailRedirectTo: `${getSiteOrigin()}/api/auth/callback` },
+  })
+
+  return {
+    success: true,
+    message: `Sent. Check ${validated.data.email} (and your spam folder) for a new confirmation link.`,
+  }
 }
 
 export async function logout() {

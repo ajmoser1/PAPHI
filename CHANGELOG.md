@@ -11,6 +11,42 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 Signup / first-session UX overhaul + founder-only preview tooling + Profile/Settings split + live Find a Brother search.
 
+### Security Advisor warnings — 2026-10-02
+
+Clears all 14 database warnings from the Supabase Security Advisor in one migration. Why: keep the advisor at zero so real regressions stand out, and shrink what the public anon key can reach. Report: [`docs/security/2026-10-02-security-advisor-warnings.md`](docs/security/2026-10-02-security-advisor-warnings.md).
+
+- **RLS helpers moved to a `private` schema** (`viewer_chapter_id`, `viewer_is_active`, `can_view_profile`, `can_message`). Policies keep working (same function OIDs); the helpers just stop being callable as `/rest/v1/rpc/*`. `search_members` re-created to reference `private.*`.
+- **`chapter_requests` is service-role only:** the always-true anon/authenticated INSERT policy and client grants are gone. The start-chapter form already inserted via the server action.
+- **`get_platform_stats` restricted to the service role;** the home page's live counter now polls `/api/platform-stats` (new route handler) instead of the RPC.
+- `handle_new_user`, prod-only `is_admin` and `rls_auto_enable`: EXECUTE revoked from client roles. `pg_trgm` moved from `public` to `extensions`.
+- Still manual: enable leaked password protection in the Auth dashboard.
+- Notable: `supabase/migrations/20261002000000_security_advisor_warnings.sql`, `docs/security/2026-10-02-security-advisor-verify.sql`, `src/app/api/platform-stats/route.ts`, `src/components/layout/PlatformStats.tsx`, `src/proxy.ts`
+
+### Public Privacy Policy and Terms pages — 2026-10-02
+
+Needed for Google OAuth brand verification (so the consent screen says "Chapter Connect" instead of the Supabase project domain). Why: Google requires public privacy and terms URLs on the app's own domain.
+
+- New public routes `/privacy` and `/terms` under `src/app/(legal)/` with their own readable layout; allowed in `proxy.ts` without auth.
+- Content reflects what the app actually does: phone collected for admin verification, member-controlled contact visibility, Supabase / Vercel / Google / Anthropic (optional LinkedIn PDF import) as processors, Google API Services User Data Policy statement.
+- Operator name, contact email, governing law and effective date live in `src/lib/legal.ts`; contact email falls back to `NEXT_PUBLIC_FEEDBACK_EMAIL`.
+- Footer links on the landing page and auth pages; "By continuing you agree…" line on register, complete-signup and start-chapter.
+
+### Signup & onboarding UX / accessibility pass — 2026-10-01
+
+Fixes from a UX audit of register → confirm → complete-signup → pending profile. Why: three dead ends were costing sign-ups, and no form error in the flow was reachable by assistive tech.
+
+- **No more re-typing after email confirmation:** register stores phone, class year, role, chapter and invite token in user metadata (prefill only; server re-validates, `handle_new_user` still ignores it) and sets `emailRedirectTo` to our callback with the invite token, so complete-signup comes back pre-filled. Success state is now a green "Check your email" card instead of a red message over a live form.
+- **Broken invite links fall back to the chapter list** instead of failing at submit (`MembershipFields`).
+- **Submitted values survive a failed submit** (`AuthState.values`), since React 19 resets `<form action>` after the action runs.
+- **Friendly auth errors with recovery actions:** "Email not confirmed" offers *Resend confirmation email* (`resendConfirmation` action); expired reset links offer a new one; "already registered" links to sign in (`lib/auth-errors.ts`).
+- **Accessible forms:** new `ui/form-field.tsx` (`FormField`, `PasswordField`, `SelectField`, `FormAlert`) wires `aria-invalid` / `aria-describedby`, inline errors, a focusable `role="alert"` summary that links to each field and takes focus after a failed submit, show/hide password toggles, and `autoComplete` on every field. Role picker is a real `<fieldset>`/`<legend>`.
+- **CTA hierarchy and touch targets:** primary buttons and inputs are 44px on touch / 40px with a pointer; "Request to start it" demoted from a full-width button to a link; login's "Create an account" is now an outline button under a "New here?" label.
+- Complete-signup caption now reflects the real provider (no more "Signed in with Google" for email users); card titles render as `<h1>`; auth layout has a `<main>`; per-page `<title>`s via a root title template.
+- Mobile nav toggle has an accessible name and `aria-expanded`; pending banner hides its "Set up profile" button on `/profile/edit`; pending profile page is titled "Set up your profile" and links out to Find a Brother.
+- `/start-chapter` moved under the `(auth)` route group (same URL) so it shares the branded layout; fixed a literal `&apos;` in its success copy; added a back link.
+- `/auth/pending` "Finishing account setup" has a *Check again* button instead of asking users to refresh.
+- Notable: `src/actions/auth.ts`, `src/components/ui/form-field.tsx`, `src/components/auth/MembershipFields.tsx`, `src/app/(auth)/**`
+
 ### Security audit fixes — 2026-10-01
 
 - **Stored XSS closed:** chapter branding colors are allowlisted (hex / `rgb` / `hsl` / `oklch`) on save and re-validated before rendering into `<style>` (`src/lib/colors.ts`, `TenantTheme.tsx`).

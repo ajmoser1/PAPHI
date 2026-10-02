@@ -58,7 +58,10 @@ export async function proxy(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/auth/') ||
-    pathname === '/start-chapter'
+    pathname === '/api/platform-stats' ||
+    pathname === '/start-chapter' ||
+    pathname === '/privacy' ||
+    pathname === '/terms'
 
   // Redirect unauthenticated users trying to access protected routes
   if (!user && !isPublicRoute) {

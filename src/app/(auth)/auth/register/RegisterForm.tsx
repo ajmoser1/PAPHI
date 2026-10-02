@@ -1,219 +1,194 @@
 'use client'
 
 import { useActionState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { register } from '@/actions/auth'
 import { AuthDivider, GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
-import { PASSWORD_REQUIREMENTS_HINT } from '@/lib/constants'
+import {
+  BrokenInviteNotice,
+  MembershipFields,
+  describeInvite,
+  type ChapterOption,
+  type Inviter,
+} from '@/components/auth/MembershipFields'
+import { PASSWORD_REQUIREMENTS_HINT, SIGNUP_FIELD_LABELS } from '@/lib/constants'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormAlert, FormField, PasswordField } from '@/components/ui/form-field'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-type ChapterOption = { id: string; name: string; school_name: string | null }
-type Inviter = { first_name: string; last_name: string }
-
-function inviteDescription(
-  inviteToken: string,
-  inviteChapter: ChapterOption | null,
-  inviter: Inviter | null
-): string {
-  if (inviteToken && inviteChapter && inviter) {
-    const name = `${inviter.first_name} ${inviter.last_name}`
-    return inviteChapter.school_name
-      ? `${name} invited you to ${inviteChapter.name} at ${inviteChapter.school_name}.`
-      : `${name} invited you to ${inviteChapter.name}.`
-  }
-  if (inviteToken && inviteChapter) {
-    return `You've been invited to join ${inviteChapter.name}${
-      inviteChapter.school_name ? ` — ${inviteChapter.school_name}` : ''
-    }.`
-  }
-  if (inviteToken) {
-    return "You've been invited to join your chapter network."
-  }
-  return 'Join your chapter network. Select your chapter and submit for admin approval.'
-}
-
 export function RegisterForm({
-  chapters = [],
-  hasActiveChapters = true,
-  inviteChapter = null,
-  inviter = null,
+  chapters,
+  inviteToken,
+  inviteBroken,
+  inviteChapter,
+  inviter,
+  fromProfileId,
 }: {
-  chapters?: ChapterOption[]
-  hasActiveChapters?: boolean
-  inviteChapter?: ChapterOption | null
-  inviter?: Inviter | null
+  chapters: ChapterOption[]
+  inviteToken: string
+  inviteBroken: boolean
+  inviteChapter: ChapterOption | null
+  inviter: Inviter | null
+  fromProfileId: string
 }) {
   const [state, action, isPending] = useActionState(register, undefined)
-  const searchParams = useSearchParams()
-  const inviteToken = searchParams.get('invite') ?? ''
-  const fromProfileId = searchParams.get('from') ?? ''
-  const canSelectChapter = !inviteToken && chapters.length > 0
+  const values = state?.values ?? {}
+  const canSubmit = Boolean(inviteToken) || chapters.length > 0
+
+  if (state?.success) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle as="h1" className="text-xl">Check your email</CardTitle>
+          <CardDescription>One more step and your account is ready.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <FormAlert success message={state.message} />
+          <p className="text-sm text-muted-foreground">
+            Didn&apos;t get it? Check your spam folder, or sign in and we&apos;ll offer to send it again.
+          </p>
+          <Link href="/auth/login" className={cn(buttonVariants({ size: 'lg' }), 'h-11 w-full text-base md:h-10 md:text-sm')}>
+            Go to sign in
+          </Link>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create an account</CardTitle>
+        <CardTitle as="h1" className="text-xl">Create an account</CardTitle>
         <CardDescription>
-          {inviteDescription(inviteToken, inviteChapter, inviter)}
+          {describeInvite(inviteChapter, inviter, 'Join your chapter network to find brothers for referrals, mentorship, and opportunities.')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {state?.message && (
-          <p className="text-sm text-destructive">{state.message}</p>
-        )}
-        <GoogleSignInButton
-          invite={inviteToken || undefined}
-          from={fromProfileId || undefined}
-        />
+        {inviteBroken && <BrokenInviteNotice />}
+        <GoogleSignInButton invite={inviteToken || undefined} from={fromProfileId || undefined} />
         <AuthDivider label="or register with email" />
-        <form action={action} className="space-y-4">
-          {inviteToken && <input type="hidden" name="inviteToken" value={inviteToken} />}
+
+        <form action={action} className="space-y-4" aria-busy={isPending} noValidate={false}>
+          <FormAlert
+            message={state?.message}
+            errors={state?.errors}
+            fieldLabels={SIGNUP_FIELD_LABELS}
+            action={
+              state?.code === 'already_registered' ? (
+                <Link href="/auth/login" className="text-sm font-medium underline underline-offset-4">
+                  Sign in instead
+                </Link>
+              ) : undefined
+            }
+          />
+
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="firstName">First name</Label>
-              <Input id="firstName" name="firstName" placeholder="John" required />
-              {state?.errors?.firstName && (
-                <p className="text-xs text-destructive">{state.errors.firstName[0]}</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="lastName">Last name</Label>
-              <Input id="lastName" name="lastName" placeholder="Smith" required />
-              {state?.errors?.lastName && (
-                <p className="text-xs text-destructive">{state.errors.lastName[0]}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
-            {state?.errors?.email && (
-              <p className="text-xs text-destructive">{state.errors.email[0]}</p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="+1 555 000 0000"
+            <FormField
+              id="firstName"
+              name="firstName"
+              label="First name"
+              autoComplete="given-name"
+              defaultValue={values.firstName}
+              error={state?.errors?.firstName?.[0]}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Chapter admins use this to verify your identity while your account is pending.
-            </p>
-            {state?.errors?.phone && (
-              <p className="text-xs text-destructive">{state.errors.phone[0]}</p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="graduationYear">Graduation year</Label>
-            <Input
-              id="graduationYear"
-              name="graduationYear"
-              type="number"
-              min={1950}
-              max={2100}
-              placeholder="2026"
+            <FormField
+              id="lastName"
+              name="lastName"
+              label="Last name"
+              autoComplete="family-name"
+              defaultValue={values.lastName}
+              error={state?.errors?.lastName?.[0]}
               required
             />
-            {state?.errors?.graduationYear && (
-              <p className="text-xs text-destructive">{state.errors.graduationYear[0]}</p>
-            )}
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" name="password" type="password" required minLength={8} />
-            <p className="text-xs text-muted-foreground">{PASSWORD_REQUIREMENTS_HINT}</p>
-            {state?.errors?.password && (
-              <p className="text-xs text-destructive">{state.errors.password[0]}</p>
-            )}
-          </div>
-          {canSelectChapter && (
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <Label htmlFor="chapterId">Chapter</Label>
-                <select
-                  id="chapterId"
-                  name="chapterId"
-                  required
-                  className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
-                >
-                  <option value="">Select your chapter</option>
-                  {chapters.map((ch) => (
-                    <option key={ch.id} value={ch.id}>
-                      {ch.name} — {ch.school_name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Approval is required before you can view member details or send messages.
-                </p>
-              </div>
-              <Link
-                href="/start-chapter"
-                className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}
-              >
-                Don&apos;t see your chapter? Request to start it
-              </Link>
-            </div>
-          )}
-          {!inviteToken && !canSelectChapter && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 space-y-2">
-              {hasActiveChapters ? (
-                <p>Please pick a chapter to continue.</p>
-              ) : (
-                <>
-                  <p>No active chapters are available yet. Request your chapter to get started, or ask your chapter admin for an invite link.</p>
-                  <Link
-                    href="/start-chapter"
-                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'bg-white')}
-                  >
-                    Don&apos;t see your chapter? Request to start it
-                  </Link>
-                </>
-              )}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label>I am a...</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { value: 'undergrad', label: 'Current Undergrad' },
-                { value: 'alumni', label: 'Alumni' },
-              ].map(({ value, label }) => (
-                <label
-                  key={value}
-                  className="flex items-center gap-2 border rounded-lg p-3 cursor-pointer hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-                >
-                  <input type="radio" name="role" value={value} className="accent-primary" required />
-                  <span className="text-sm font-medium">{label}</span>
-                </label>
-              ))}
-            </div>
-            {state?.errors?.role && (
-              <p className="text-xs text-destructive">{state.errors.role[0]}</p>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            After registering, you&apos;ll complete a short profile. Messaging and full member
-            profiles unlock once a chapter admin approves your account.
+
+          <FormField
+            id="email"
+            name="email"
+            type="email"
+            label="Email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="you@example.com"
+            defaultValue={values.email}
+            error={state?.errors?.email?.[0]}
+            required
+          />
+
+          <FormField
+            id="phone"
+            name="phone"
+            type="tel"
+            label="Phone"
+            autoComplete="tel"
+            placeholder="412 555 0100"
+            defaultValue={values.phone}
+            hint="Only your chapter admin sees this. They use it to confirm it's really you."
+            error={state?.errors?.phone?.[0]}
+            required
+          />
+
+          <FormField
+            id="graduationYear"
+            name="graduationYear"
+            type="number"
+            label="Graduation year (or expected)"
+            inputMode="numeric"
+            min={1950}
+            max={2100}
+            placeholder="2026"
+            defaultValue={values.graduationYear}
+            error={state?.errors?.graduationYear?.[0]}
+            required
+          />
+
+          <PasswordField
+            id="password"
+            name="password"
+            label="Password"
+            autoComplete="new-password"
+            minLength={8}
+            hint={PASSWORD_REQUIREMENTS_HINT}
+            error={state?.errors?.password?.[0]}
+            required
+          />
+
+          <MembershipFields
+            chapters={chapters}
+            inviteToken={inviteToken}
+            errors={state?.errors}
+            defaults={{ chapterId: values.chapterId, role: values.role }}
+          />
+
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Next you&apos;ll add a photo and your work details. Messaging and full member profiles
+            unlock once a chapter admin approves you.
+          </p>
+
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            By continuing you agree to our{' '}
+            <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
+              Privacy Policy
+            </Link>
+            .
           </p>
           <Button
             type="submit"
-            className="w-full"
-            disabled={isPending || (!inviteToken && !canSelectChapter)}
+            size="lg"
+            className="h-11 w-full text-base md:h-10 md:text-sm"
+            disabled={isPending || !canSubmit}
           >
             {isPending ? 'Creating account…' : 'Create account'}
           </Button>
         </form>
-        <p className="text-sm text-muted-foreground text-center">
+
+        <p className="text-center text-sm text-muted-foreground">
           Already have an account?{' '}
           <Link href="/auth/login" className="underline underline-offset-4 hover:text-primary">
             Sign in

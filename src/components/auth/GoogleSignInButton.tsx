@@ -74,14 +74,18 @@ export function GoogleSignInButton({
         type="button"
         variant="outline"
         size="lg"
-        className="w-full"
+        className="h-11 w-full text-base md:h-10 md:text-sm"
         disabled={isPending}
         onClick={handleClick}
       >
         <GoogleMark />
         {isPending ? 'Redirecting…' : label}
       </Button>
-      {error && <p className="text-sm text-destructive text-center">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive text-center">
+          {error}
+        </p>
+      )}
     </div>
   )
 }
