@@ -135,6 +135,11 @@ function slugifyName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
+// Companies and industries are shared across every chapter/fraternity, so
+// destructive changes (reject, merge, rename/delete industries) are founder-only.
+const FOUNDER_ONLY_MESSAGE =
+  'Only the platform founder can make this change — it affects every chapter.'
+
 export async function createCompany(formData: FormData): Promise<{ message?: string }> {
   const { adminClient } = await requireChapterAdmin()
   const name = (formData.get('name') as string)?.trim()
@@ -161,7 +166,7 @@ export async function createCompany(formData: FormData): Promise<{ message?: str
 }
 
 export async function updateCompany(formData: FormData): Promise<{ message?: string }> {
-  const { adminClient } = await requireChapterAdmin()
+  const { adminClient, profile } = await requireChapterAdmin()
   const id = (formData.get('id') as string)?.trim()
   const name = (formData.get('name') as string)?.trim()
   const industryId = (formData.get('industryId') as string) || null
@@ -172,6 +177,9 @@ export async function updateCompany(formData: FormData): Promise<{ message?: str
   if (!name) return { message: 'Company name is required.' }
   if (!['active', 'suggested', 'rejected'].includes(status)) {
     return { message: 'Invalid status.' }
+  }
+  if (status === 'rejected' && profile.role !== ROLES.FOUNDER) {
+    return { message: FOUNDER_ONLY_MESSAGE }
   }
 
   const { error } = await adminClient
@@ -196,7 +204,10 @@ export async function setCompanyStatus(
   companyId: string,
   status: 'active' | 'rejected'
 ): Promise<{ message?: string }> {
-  const { adminClient } = await requireChapterAdmin()
+  const { adminClient, profile } = await requireChapterAdmin()
+  if (status === 'rejected' && profile.role !== ROLES.FOUNDER) {
+    return { message: FOUNDER_ONLY_MESSAGE }
+  }
   if (!companyId) return { message: 'Company id is required.' }
 
   const { error } = await adminClient
@@ -216,7 +227,8 @@ export async function mergeCompanies(
   keepId: string,
   absorbId: string
 ): Promise<{ message?: string }> {
-  const { adminClient } = await requireChapterAdmin()
+  const { adminClient, profile } = await requireChapterAdmin()
+  if (profile.role !== ROLES.FOUNDER) return { message: FOUNDER_ONLY_MESSAGE }
   if (!keepId || !absorbId) return { message: 'Both companies are required.' }
   if (keepId === absorbId) return { message: 'Cannot merge a company into itself.' }
 
@@ -274,7 +286,8 @@ export async function createIndustry(formData: FormData): Promise<{ message?: st
 }
 
 export async function updateIndustry(formData: FormData): Promise<{ message?: string }> {
-  const { adminClient } = await requireChapterAdmin()
+  const { adminClient, profile } = await requireChapterAdmin()
+  if (profile.role !== ROLES.FOUNDER) return { message: FOUNDER_ONLY_MESSAGE }
   const id = (formData.get('id') as string)?.trim()
   const name = (formData.get('name') as string)?.trim()
   if (!id) return { message: 'Industry id is required.' }
@@ -294,7 +307,8 @@ export async function updateIndustry(formData: FormData): Promise<{ message?: st
 }
 
 export async function deleteIndustry(industryId: string): Promise<{ message?: string }> {
-  const { adminClient } = await requireChapterAdmin()
+  const { adminClient, profile } = await requireChapterAdmin()
+  if (profile.role !== ROLES.FOUNDER) return { message: FOUNDER_ONLY_MESSAGE }
   if (!industryId) return { message: 'Industry id is required.' }
 
   const [{ count: companyCount }, { count: positionCount }] = await Promise.all([

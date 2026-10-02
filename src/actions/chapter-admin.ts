@@ -5,13 +5,16 @@ import * as z from 'zod'
 import { requireChapterAdmin } from '@/lib/auth'
 import { requireAuth } from '@/lib/auth'
 import { DEFAULT_PRIVACY_SETTINGS, ROLES } from '@/lib/constants'
+import { isSafeCssColor } from '@/lib/colors'
+
+const cssColor = z.string().trim().refine(isSafeCssColor, { error: 'Invalid color.' })
 
 const brandingSchema = z.object({
-  displayTitle: z.string().min(1),
-  tagline: z.string().optional(),
-  schoolName: z.string().optional(),
-  primaryColor: z.string().optional(),
-  accentColor: z.string().optional(),
+  displayTitle: z.string().trim().min(1).max(120),
+  tagline: z.string().trim().max(300).optional(),
+  schoolName: z.string().trim().max(200).optional(),
+  primaryColor: cssColor.optional(),
+  accentColor: cssColor.optional(),
 })
 
 export async function updateChapterBranding(formData: FormData) {
@@ -91,11 +94,7 @@ export async function updatePrivacySettings(formData: FormData) {
     },
   }
 
-  let { error } = await supabase.from('profiles').update(updates).eq('id', userId)
-  if (error) {
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    ;({ error } = await createAdminClient().from('profiles').update(updates).eq('id', userId))
-  }
+  const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/settings')

@@ -4,6 +4,7 @@ import { getCurrentUserProfile, getSearchFilters } from '@/lib/tenant'
 import { getChapterAdminContacts } from '@/lib/chapter-admins'
 import { Badge } from '@/components/ui/badge'
 import { PendingMembersGate } from '@/components/members/PendingMembersGate'
+import { FindBrotherWelcomeStrip } from '@/components/members/FindBrotherWelcomeStrip'
 import {
   MembersSearchBar,
 } from '@/components/members/MembersSearchBar'
@@ -67,12 +68,17 @@ export default async function MembersPage({
     sort_by: sort,
   }
 
+  const isPending = userProfile?.status === STATUS.PENDING_APPROVAL
+
+  // Pending members never get directory rows — not even blurred in the HTML.
   const [{ data: industries }, { data: companies }, { data: results }] = await Promise.all([
     supabase.from('industries').select('id, name').order('name'),
     supabase.from('companies').select('id, name, industry_id').eq('status', 'active').order('name'),
-    alumniOnly
-      ? supabase.rpc('search_alumni', rpcParams)
-      : supabase.rpc('search_members', { ...rpcParams, filter_alumni_only: alumniOnly }),
+    isPending
+      ? Promise.resolve({ data: [] as SearchRow[] })
+      : alumniOnly
+        ? supabase.rpc('search_alumni', rpcParams)
+        : supabase.rpc('search_members', { ...rpcParams, filter_alumni_only: alumniOnly }),
   ])
 
   const members: MemberResult[] = ((results ?? []) as SearchRow[]).map((person) => ({
@@ -88,7 +94,6 @@ export default async function MembersPage({
   }))
 
   const isFraternityWide = userProfile?.search_scope !== 'chapter'
-  const isPending = userProfile?.status === STATUS.PENDING_APPROVAL
   const adminContacts = isPending
     ? await getChapterAdminContacts(userProfile?.chapter_id)
     : null
@@ -112,7 +117,9 @@ export default async function MembersPage({
       </div>
 
       {!isPending && (
-        <MembersSearchBar
+        <>
+          <FindBrotherWelcomeStrip />
+          <MembersSearchBar
           initialQ={q}
           initialIndustry={filterIndustryId ?? ''}
           initialCompany={filterCompanyId ?? ''}
@@ -122,14 +129,11 @@ export default async function MembersPage({
           industries={industries ?? []}
           companies={companies ?? []}
         />
+        </>
       )}
 
       {isPending && adminContacts ? (
-        <PendingMembersGate
-          members={members}
-          isFraternityWide={isFraternityWide}
-          adminContacts={adminContacts}
-        />
+        <PendingMembersGate adminContacts={adminContacts} />
       ) : members.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <p className="font-medium">{alumniOnly ? 'No alumni found' : 'No members found'}</p>

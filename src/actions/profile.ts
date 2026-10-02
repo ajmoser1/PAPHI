@@ -3,28 +3,47 @@
 import { revalidatePath } from 'next/cache'
 import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { requireNotSuspended as requireAuth } from '@/lib/auth'
 import { hasVisibleContact, VISIBLE_CONTACT_REQUIRED_MESSAGE } from '@/lib/contact'
 
-async function requireAuth() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return { supabase, userId: user.id }
+const AVATAR_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+/** Check magic bytes so a spoofed Content-Type (e.g. SVG sent as image/png) is rejected. */
+async function hasImageSignature(file: File, type: string) {
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+  switch (type) {
+    case 'image/jpeg':
+      return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
+    case 'image/png':
+      return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47
+    case 'image/gif':
+      return b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38
+    case 'image/webp':
+      return (
+        b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+        b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+      )
+    default:
+      return false
+  }
+}
+
+/** Escape LIKE/ILIKE wildcards so user input matches literally. */
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`)
 }
 
 async function updateFeaturedPosition(userId: string, positionId: string | null) {
   const supabase = await createClient()
-  let { error } = await supabase
+  const { error } = await supabase
     .from('profiles')
     .update({ featured_position_id: positionId })
     .eq('id', userId)
-
-  if (error) {
-    ;({ error } = await createAdminClient()
-      .from('profiles')
-      .update({ featured_position_id: positionId })
-      .eq('id', userId))
-  }
 
   return error
 }
@@ -45,7 +64,7 @@ async function findOrCreateCompany(
   const { data: existing } = await admin
     .from('companies')
     .select('id, industry_id')
-    .ilike('name', companyName)
+    .ilike('name', escapeLike(companyName))
     .limit(1)
     .maybeSingle()
 
@@ -104,10 +123,7 @@ export async function updateProfile(_prevState: unknown, formData: FormData) {
     graduation_year: validated.data.graduationYear || null,
   }
 
-  let { error } = await supabase.from('profiles').update(updates).eq('id', userId)
-  if (error) {
-    ;({ error } = await createAdminClient().from('profiles').update(updates).eq('id', userId))
-  }
+  const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -159,12 +175,7 @@ export async function updateContactInfo(formData: FormData) {
     show_linkedin,
   }
 
-  let { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
-  if (error) {
-    ;({ error } = await createAdminClient()
-      .from('alumni_contact')
-      .upsert(data, { onConflict: 'profile_id' }))
-  }
+  const { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
 
   if (error) return { message: error.message }
 
@@ -216,12 +227,7 @@ export async function updateContactVisibility(formData: FormData) {
     show_linkedin,
   }
 
-  let { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
-  if (error) {
-    ;({ error } = await createAdminClient()
-      .from('alumni_contact')
-      .upsert(data, { onConflict: 'profile_id' }))
-  }
+  const { error } = await supabase.from('alumni_contact').upsert(data, { onConflict: 'profile_id' })
 
   if (error) return { message: error.message }
 
@@ -266,11 +272,15 @@ export async function uploadAvatar(formData: FormData) {
   if (!file || file.size === 0) return { message: 'No file provided.' }
   if (file.size > 5 * 1024 * 1024) return { message: 'File too large (max 5MB).' }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  // Public bucket: never trust the client filename/extension. SVG/HTML would be
+  // served as active content, so only raster image types are allowed.
+  const ext = AVATAR_TYPES[file.type]
+  if (!ext || !(await hasImageSignature(file, file.type))) {
+    return { message: 'Avatar must be a JPEG, PNG, WebP, or GIF image.' }
+  }
   const path = `${userId}/avatar-${Date.now()}.${ext}`
 
-  // Use admin client to bypass storage RLS
-  const { createAdminClient } = await import('@/lib/supabase/server')
+  // Admin client for storage only; paths are always scoped to the caller's userId.
   const admin = createAdminClient()
 
   // Delete any existing avatar for this user to avoid accumulating old files
@@ -281,23 +291,16 @@ export async function uploadAvatar(formData: FormData) {
 
   const { error: uploadError } = await admin.storage
     .from('avatars')
-    .upload(path, file, { upsert: false })
+    .upload(path, file, { upsert: false, contentType: file.type })
 
   if (uploadError) return { message: uploadError.message }
 
   const { data } = admin.storage.from('avatars').getPublicUrl(path)
 
-  let { error: updateError } = await supabase
+  const { error: updateError } = await supabase
     .from('profiles')
     .update({ avatar_url: data.publicUrl })
     .eq('id', userId)
-
-  if (updateError) {
-    ;({ error: updateError } = await admin
-      .from('profiles')
-      .update({ avatar_url: data.publicUrl })
-      .eq('id', userId))
-  }
 
   if (updateError) return { message: updateError.message }
   revalidatePath('/profile/edit')
@@ -307,7 +310,6 @@ export async function uploadAvatar(formData: FormData) {
 export async function removeAvatar() {
   const { supabase, userId } = await requireAuth()
 
-  const { createAdminClient } = await import('@/lib/supabase/server')
   const admin = createAdminClient()
 
   const { data: existing } = await admin.storage.from('avatars').list(userId)
@@ -315,10 +317,7 @@ export async function removeAvatar() {
     await admin.storage.from('avatars').remove(existing.map((f: { name: string }) => `${userId}/${f.name}`))
   }
 
-  let { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', userId)
-  if (error) {
-    ;({ error } = await admin.from('profiles').update({ avatar_url: null }).eq('id', userId))
-  }
+  const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', userId)
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -351,16 +350,11 @@ export async function createPosition(formData: FormData) {
     is_current: isCurrent,
   }
 
-  let { data: created, error } = await supabase
+  const { data: created, error } = await supabase
     .from('positions')
     .insert(position)
     .select('id')
     .single()
-
-  if (error) {
-    const admin = createAdminClient()
-    ;({ data: created, error } = await admin.from('positions').insert(position).select('id').single())
-  }
 
   if (error || !created) return { message: error?.message ?? 'Could not save position.' }
 
@@ -424,20 +418,11 @@ export async function updatePosition(positionId: string, formData: FormData) {
     is_current: isCurrent,
   }
 
-  let { error } = await supabase
+  const { error } = await supabase
     .from('positions')
     .update(updates)
     .eq('id', positionId)
     .eq('profile_id', userId)
-
-  if (error) {
-    const admin = createAdminClient()
-    ;({ error } = await admin
-      .from('positions')
-      .update(updates)
-      .eq('id', positionId)
-      .eq('profile_id', userId))
-  }
 
   if (error) return { message: error.message }
   revalidatePath('/profile/edit')
@@ -455,20 +440,11 @@ export async function deletePosition(positionId: string) {
 
   const wasFeatured = profile?.featured_position_id === positionId
 
-  let { error } = await supabase
+  const { error } = await supabase
     .from('positions')
     .delete()
     .eq('id', positionId)
     .eq('profile_id', userId)
-
-  if (error) {
-    const admin = createAdminClient()
-    ;({ error } = await admin
-      .from('positions')
-      .delete()
-      .eq('id', positionId)
-      .eq('profile_id', userId))
-  }
 
   if (error) return { message: error.message }
 

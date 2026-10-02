@@ -11,6 +11,18 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 Signup / first-session UX overhaul + founder-only preview tooling + Profile/Settings split + live Find a Brother search.
 
+### Security audit fixes — 2026-10-01
+
+- **Stored XSS closed:** chapter branding colors are allowlisted (hex / `rgb` / `hsl` / `oklch`) on save and re-validated before rendering into `<style>` (`src/lib/colors.ts`, `TenantTheme.tsx`).
+- **Approval gate enforced:** pending members no longer receive directory rows (the blurred grid is placeholder-only), and RLS `can_view_profile` now requires an *active* viewer. Legacy permissive `profiles_select_active` / `positions_select_active_profiles` policies dropped.
+- **Messaging RLS:** conversations require both participants active + same fraternity (`can_message`); messages are soft-delete-only (column grant on `is_deleted`), so they can't be rewritten or moved into other threads; 4,000-char cap.
+- **Avatar uploads:** JPEG/PNG/WebP/GIF only, verified by magic bytes; extension/content type are set server-side.
+- `chapters.contact_email` hidden from client roles; `search_members` escapes LIKE wildcards, clamps page size to 100, and derives the viewer chapter server-side.
+- Founder-only: reject/merge companies and rename/delete career fields (shared across all chapters).
+- `lib/auth.ts` is `server-only` (was `'use server'`); removed service-role write fallbacks; suspended accounts can't edit profiles; admin/founder guards require `status = active`.
+- Notable: `supabase/migrations/20261001000000_security_audit_fixes.sql`
+- Full report: [`docs/security/2026-10-01-security-audit.md`](docs/security/2026-10-01-security-audit.md)
+
 ### Launch security hardening
 
 - Block privilege escalation: authenticated users can no longer UPDATE `profiles.role` / `status` / `chapter_id` (column grants + trigger); `handle_new_user` always seeds `pending`.
@@ -36,6 +48,7 @@ Signup / first-session UX overhaul + founder-only preview tooling + Profile/Sett
 - RPC: `search_members` / `search_alumni` accept `sort_by` (`20260812000000_search_members_sort_by.sql`).
 - Moved All chapters / My chapter toggle under the search filters; removed the global white top-bar strip.
 - Search input suggests company and career-field names via browser datalist.
+- First-visit welcome strip on Find a Brother (dismissible per session); Settings **Questions or feedback** mailto card (`NEXT_PUBLIC_FEEDBACK_EMAIL`).
 
 ### Profile vs Settings
 

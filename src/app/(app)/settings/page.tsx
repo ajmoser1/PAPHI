@@ -5,6 +5,7 @@ import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm'
 import { ContactVisibilityForm } from '@/components/settings/ContactVisibilityForm'
 import { SearchScopeSettingsForm } from '@/components/settings/SearchScopeSettingsForm'
 import { AccountSettingsCard } from '@/components/settings/AccountSettingsCard'
+import { FeedbackCard } from '@/components/settings/FeedbackCard'
 import { Separator } from '@/components/ui/separator'
 
 export default async function SettingsPage() {
@@ -59,6 +60,10 @@ export default async function SettingsPage() {
       <Separator />
 
       <AccountSettingsCard email={user.email ?? null} />
+
+      <Separator />
+
+      <FeedbackCard />
     </div>
   )
 }

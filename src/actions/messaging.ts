@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
+const MAX_MESSAGE_LENGTH = 4000
+
 async function requireActive() {
   const { supabase, userId } = await requireActiveProfile()
   return { supabase, userId }
@@ -70,6 +72,10 @@ export async function sendMessage(conversationId: string, body: string): Promise
 
   const trimmed = body.trim()
   if (!trimmed) return
+  // Mirrors the messages_body_length DB constraint.
+  if (trimmed.length > MAX_MESSAGE_LENGTH) {
+    throw new Error(`Messages are limited to ${MAX_MESSAGE_LENGTH} characters.`)
+  }
 
   const { error } = await supabase.from('messages').insert({
     conversation_id: conversationId,

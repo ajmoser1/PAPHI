@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Changelog
 
 After major product or platform changes, update [`CHANGELOG.md`](CHANGELOG.md) (see `.cursor/rules/changelog.mdc`).
+
+## Security reports
+
+Security audits and remediation write-ups live in [`docs/security/`](docs/security/README.md). For a new report, copy `TEMPLATE.md`, name it `YYYY-MM-DD-short-title.md`, and add a row to the index in `docs/security/README.md`.
