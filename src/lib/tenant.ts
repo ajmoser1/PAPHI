@@ -35,6 +35,11 @@ export type TenantContext = {
 
 const CHAPTER_SLUG_COOKIE = 'chapter_slug'
 
+// Host labels that are environments or infrastructure, never a chapter.
+// `staging.<domain>` is the Vercel branch deployment for the `staging` branch;
+// without this it would be looked up as a chapter with slug "staging".
+const RESERVED_HOST_LABELS = new Set(['www', 'staging', 'preview', 'dev', 'test'])
+
 export function getChapterSlugFromHost(host: string): string | null {
   const hostname = host.split(':')[0]
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
@@ -48,7 +53,7 @@ export function getChapterSlugFromHost(host: string): string | null {
     return null
   }
   const parts = hostname.split('.')
-  if (parts.length >= 3 && parts[0] !== 'www') {
+  if (parts.length >= 3 && !RESERVED_HOST_LABELS.has(parts[0])) {
     return parts[0]
   }
   return null
