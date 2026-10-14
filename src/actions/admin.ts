@@ -10,12 +10,12 @@ import {
   hasVisibleContact,
 } from '@/lib/contact'
 
-export async function approveUser(profileId: string) {
+export async function approveUser(profileId: string): Promise<{ message?: string }> {
   const { profile, adminClient } = await requireChapterAdmin()
 
   const { data: authUser, error: authUserError } = await adminClient.auth.admin.getUserById(profileId)
   if (authUserError || !authUser?.user) {
-    throw new Error('Cannot approve profile without a valid auth account.')
+    return { message: 'Cannot approve profile without a valid auth account.' }
   }
 
   const { data: target } = await adminClient
@@ -24,17 +24,17 @@ export async function approveUser(profileId: string) {
     .eq('id', profileId)
     .single()
 
-  if (!target) throw new Error('Profile not found.')
+  if (!target) return { message: 'Profile not found.' }
   if (profile.role !== ROLES.FOUNDER && target.chapter_id !== profile.chapter_id) {
-    throw new Error('Cannot approve users outside your chapter.')
+    return { message: 'Cannot approve users outside your chapter.' }
   }
 
   // Incomplete stubs (auth trigger, no chapter yet) can be assigned the approver's chapter.
   const chapterIdForActivation = target.chapter_id ?? profile.chapter_id
   if (!chapterIdForActivation) {
-    throw new Error(
+    return { message: 
       'Cannot approve this member until they finish signup and choose a chapter, or you have a chapter assigned to your admin account.'
-    )
+     }
   }
 
   const { data: contact } = await adminClient
@@ -44,7 +44,7 @@ export async function approveUser(profileId: string) {
     .maybeSingle()
 
   if (!hasVisibleContact(contact)) {
-    throw new Error(CONTACT_REQUIRED_FOR_APPROVAL_MESSAGE)
+    return { message: CONTACT_REQUIRED_FOR_APPROVAL_MESSAGE }
   }
 
   const { error } = await adminClient
@@ -60,11 +60,12 @@ export async function approveUser(profileId: string) {
     })
     .eq('id', profileId)
 
-  if (error) throw new Error(error.message)
-  revalidatePath('/admin/approvals')
+  if (error) return { message: error.message }
+  revalidatePath('/admin')
+  return {}
 }
 
-export async function rejectUser(profileId: string) {
+export async function rejectUser(profileId: string): Promise<{ message?: string }> {
   const { profile, adminClient } = await requireChapterAdmin()
 
   const { data: target } = await adminClient
@@ -73,9 +74,9 @@ export async function rejectUser(profileId: string) {
     .eq('id', profileId)
     .single()
 
-  if (!target) throw new Error('Profile not found.')
+  if (!target) return { message: 'Profile not found.' }
   if (profile.role !== ROLES.FOUNDER && target.chapter_id !== profile.chapter_id) {
-    throw new Error('Cannot reject users outside your chapter.')
+    return { message: 'Cannot reject users outside your chapter.' }
   }
 
   const { error } = await adminClient
@@ -83,15 +84,16 @@ export async function rejectUser(profileId: string) {
     .update({ status: 'suspended' })
     .eq('id', profileId)
 
-  if (error) throw new Error(error.message)
-  revalidatePath('/admin/approvals')
+  if (error) return { message: error.message }
+  revalidatePath('/admin')
+  return {}
 }
 
-export async function removeAcceptedProfile(profileId: string) {
+export async function removeAcceptedProfile(profileId: string): Promise<{ message?: string }> {
   const { profile, adminClient, userId } = await requireChapterAdmin()
 
   if (profileId === userId) {
-    throw new Error('You cannot remove your own profile.')
+    return { message: 'You cannot remove your own profile.' }
   }
 
   const { data: targetProfile } = await adminClient
@@ -100,18 +102,18 @@ export async function removeAcceptedProfile(profileId: string) {
     .eq('id', profileId)
     .single()
 
-  if (!targetProfile) throw new Error('Profile not found.')
+  if (!targetProfile) return { message: 'Profile not found.' }
   if (
     profile.role !== ROLES.FOUNDER &&
     targetProfile.chapter_id !== profile.chapter_id
   ) {
-    throw new Error('Cannot remove users outside your chapter.')
+    return { message: 'Cannot remove users outside your chapter.' }
   }
   if (targetProfile.role === ROLES.CHAPTER_ADMIN || targetProfile.role === ROLES.FOUNDER) {
-    throw new Error('Cannot remove an admin profile.')
+    return { message: 'Cannot remove an admin profile.' }
   }
   if (targetProfile.status !== 'active') {
-    throw new Error('Only accepted profiles can be removed.')
+    return { message: 'Only accepted profiles can be removed.' }
   }
 
   const { error } = await adminClient
@@ -119,9 +121,10 @@ export async function removeAcceptedProfile(profileId: string) {
     .update({ status: 'suspended' })
     .eq('id', profileId)
 
-  if (error) throw new Error(error.message)
-  revalidatePath('/admin/approvals')
+  if (error) return { message: error.message }
+  revalidatePath('/admin')
   revalidatePath('/members')
+  return {}
 }
 
 const companySchema = z.object({
@@ -161,7 +164,7 @@ export async function createCompany(formData: FormData): Promise<{ message?: str
     status: 'active',
   })
   if (error) return { message: error.message }
-  revalidatePath('/admin/companies')
+  revalidatePath('/admin')
   return {}
 }
 
@@ -194,7 +197,7 @@ export async function updateCompany(formData: FormData): Promise<{ message?: str
     .eq('id', id)
 
   if (error) return { message: error.message }
-  revalidatePath('/admin/companies')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
   return {}
@@ -216,7 +219,7 @@ export async function setCompanyStatus(
     .eq('id', companyId)
 
   if (error) return { message: error.message }
-  revalidatePath('/admin/companies')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
   return {}
@@ -266,7 +269,7 @@ export async function mergeCompanies(
 
   if (rejectErr) return { message: rejectErr.message }
 
-  revalidatePath('/admin/companies')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
   return {}
@@ -279,7 +282,7 @@ export async function createIndustry(formData: FormData): Promise<{ message?: st
   const slug = slugifyName(name)
   const { error } = await adminClient.from('industries').insert({ name, slug })
   if (error) return { message: error.message }
-  revalidatePath('/admin/industries')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
   return {}
@@ -299,10 +302,10 @@ export async function updateIndustry(formData: FormData): Promise<{ message?: st
     .eq('id', id)
 
   if (error) return { message: error.message }
-  revalidatePath('/admin/industries')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
-  revalidatePath('/admin/companies')
+  revalidatePath('/admin')
   return {}
 }
 
@@ -331,7 +334,7 @@ export async function deleteIndustry(industryId: string): Promise<{ message?: st
 
   const { error } = await adminClient.from('industries').delete().eq('id', industryId)
   if (error) return { message: error.message }
-  revalidatePath('/admin/industries')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
   return {}
@@ -361,5 +364,5 @@ export async function promoteToChapterAdmin(profileId: string) {
     .eq('id', profileId)
 
   if (error) throw new Error(error.message)
-  revalidatePath('/admin/approvals')
+  revalidatePath('/admin')
 }

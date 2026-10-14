@@ -1,24 +1,34 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft, Building2, Calendar, GraduationCap, Pencil, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getMemberProfile, getMemberPositions } from '@/lib/members'
 import { getOwnProfileForApp } from '@/lib/profile'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Mail, Phone, ExternalLink, Building2, Calendar, MessageSquare } from 'lucide-react'
-import { createConversation } from '@/actions/messaging'
+import { buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MemberAvatar } from '@/components/members/MemberAvatar'
+import { RoleMarker, roleKind } from '@/components/members/RoleMarker'
+import { MessageStarter } from '@/components/messaging/MessageStarter'
+import { ContactRow } from '@/components/profile/ContactRow'
 import { canViewBio, canViewContact, canViewPositions } from '@/lib/privacy'
 import { pickDisplayPosition } from '@/lib/positions'
 import { cn } from '@/lib/utils'
 
+function safeBack(value: string | string[] | undefined): string {
+  const v = Array.isArray(value) ? value[0] : value
+  if (v && v.startsWith('/members') && !v.startsWith('//')) return v
+  return '/members'
+}
+
 export default async function MemberProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { id } = await params
+  const [{ id }, sp] = await Promise.all([params, searchParams])
+  const backHref = safeBack(sp.back)
   const supabase = await createClient()
 
   const {
@@ -27,7 +37,6 @@ export default async function MemberProfilePage({
   if (!user) redirect('/auth/login')
 
   const viewerProfile = await getOwnProfileForApp()
-
   const viewerIsActive = viewerProfile?.status === 'active'
   const viewerChapterId = viewerProfile?.chapter_id ?? null
 
@@ -36,16 +45,15 @@ export default async function MemberProfilePage({
       <div className="mx-auto max-w-2xl">
         <Card>
           <CardContent className="space-y-4 pt-6">
-            <h1 className="text-xl font-semibold text-primary">Approval required</h1>
+            <h1 className="heading-3 text-primary">Approval required</h1>
             <p className="text-sm text-muted-foreground">
-              Your account is pending chapter admin approval. Member profiles and messaging unlock
-              after approval.
+              Your account is pending chapter admin approval. Member profiles and messaging unlock after approval.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Link href="/members" className={buttonVariants({ size: 'sm', variant: 'outline' })}>
+              <Link href="/members" className={buttonVariants({ variant: 'outline' })}>
                 Back to Find a Brother
               </Link>
-              <Link href="/profile/edit" className={buttonVariants({ size: 'sm' })}>
+              <Link href="/profile/edit" className={buttonVariants()}>
                 Complete your profile
               </Link>
             </div>
@@ -67,22 +75,14 @@ export default async function MemberProfilePage({
 
   let targetChapter = null
   if (profile?.chapter_id) {
-    const { data } = await supabase
-      .from('chapters')
-      .select('name, school_name')
-      .eq('id', profile.chapter_id)
-      .single()
+    const { data } = await supabase.from('chapters').select('name, school_name').eq('id', profile.chapter_id).single()
     targetChapter = data
   }
 
   if (
     !profile ||
     profile.status !== 'active' ||
-    (profile.role !== 'undergrad' &&
-      profile.role !== 'alumni' &&
-      profile.role !== 'admin' &&
-      profile.role !== 'chapter_admin' &&
-      profile.role !== 'founder')
+    !['undergrad', 'alumni', 'admin', 'chapter_admin', 'founder'].includes(profile.role)
   ) {
     notFound()
   }
@@ -90,173 +90,174 @@ export default async function MemberProfilePage({
   const privacySettings = (profile.privacy_settings as Record<string, string>) ?? {}
   const showBio = canViewBio(privacySettings, viewerChapterId, profile.chapter_id)
   const showPositions = canViewPositions(privacySettings, viewerChapterId, profile.chapter_id)
-  const showContact =
-    viewerIsActive &&
-    canViewContact(privacySettings, viewerChapterId, profile.chapter_id)
+  const showContact = viewerIsActive && canViewContact(privacySettings, viewerChapterId, profile.chapter_id)
 
-  const isAlumni = profile.role === 'alumni'
-  const isAdmin = profile.role === 'admin' || profile.role === 'chapter_admin'
-  const initials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase()
   const displayPosition = pickDisplayPosition(
     (positions ?? []) as Parameters<typeof pickDisplayPosition>[0],
     profile.featured_position_id
   )
+  const displayCompany = (displayPosition as { companies?: { name?: string } } | undefined)?.companies?.name ?? null
   const isOwnProfile = user.id === id
+  const isAlumni = roleKind(profile.role) === 'alumni'
 
-  async function startConversation() {
-    'use server'
-    const conversationId = await createConversation(id)
-    redirect(`/messages/${conversationId}`)
-  }
+  const visibleContact =
+    showContact && contact && ((contact.show_email && contact.email) || (contact.show_phone && contact.phone) || (contact.show_linkedin && contact.linkedin_url))
+  const hasExperience = showPositions && positions && positions.length > 0
+  const hasBio = showBio && Boolean(profile.bio)
+  const limitedProfile = !hasBio && !hasExperience && !visibleContact
+
+  const sortedPositions = [...(positions ?? [])].sort((a, b) => {
+    if (a.is_current !== b.is_current) return a.is_current ? -1 : 1
+    return (b.start_year ?? 0) - (a.start_year ?? 0)
+  })
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="space-y-4">
-        <div className="flex items-start gap-4">
-          <Avatar
-            className={cn(
-              'h-20 w-20 shrink-0',
-              isAlumni && 'ring-2 ring-[var(--gold)] ring-offset-2'
-            )}
-          >
-            <AvatarImage src={profile.avatar_url ?? undefined} />
-            <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold">
-                {profile.first_name} {profile.last_name}
-              </h1>
-              <Badge
-                variant={isAlumni ? 'default' : 'secondary'}
-                className={cn(
-                  isAlumni && 'bg-[var(--gold)] text-primary hover:bg-[var(--gold)]',
-                  isAdmin && 'bg-primary text-primary-foreground hover:bg-primary'
-                )}
-              >
-                {isAlumni ? 'Alumni' : isAdmin ? 'Admin' : 'Undergrad'}
-              </Badge>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <Link
+        href={backHref}
+        className="inline-flex min-h-9 items-center gap-1.5 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        <ArrowLeft className="size-4" aria-hidden="true" />
+        Back to Find a Brother
+      </Link>
+
+      <Card>
+        <CardContent className="flex flex-col gap-5 pt-2 sm:flex-row sm:items-start">
+          <MemberAvatar
+            firstName={profile.first_name ?? ''}
+            lastName={profile.last_name ?? ''}
+            avatarUrl={profile.avatar_url}
+            size={96}
+            highlight={isAlumni}
+          />
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="heading-1">
+                  {profile.first_name} {profile.last_name}
+                </h1>
+                <RoleMarker role={profile.role} />
+              </div>
+              {displayPosition && showPositions && (
+                <p className="mt-1 text-base text-foreground/85">
+                  {displayPosition.title}
+                  {displayCompany ? ` at ${displayCompany}` : ''}
+                </p>
+              )}
             </div>
-            {showPositions && displayPosition && (
-              <p className="text-muted-foreground">
-                {displayPosition.title} at{' '}
-                {(displayPosition as { companies?: { name?: string } }).companies?.name}
-              </p>
-            )}
-            <div className="mt-2 flex flex-wrap gap-2">
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {profile.graduation_year && (
-                <Badge variant="secondary">
-                  <Calendar className="mr-1 h-3 w-3" /> Class of {profile.graduation_year}
-                </Badge>
+                <li className="inline-flex items-center gap-1.5">
+                  <Calendar className="size-4" aria-hidden="true" /> Class of {profile.graduation_year}
+                </li>
               )}
               {targetChapter?.name && (
-                <Badge variant="secondary">{targetChapter.name}</Badge>
+                <li className="inline-flex items-center gap-1.5">
+                  <ShieldCheck className="size-4" aria-hidden="true" /> {targetChapter.name}
+                </li>
               )}
               {targetChapter?.school_name && (
-                <Badge variant="secondary">{targetChapter.school_name}</Badge>
+                <li className="inline-flex items-center gap-1.5">
+                  <GraduationCap className="size-4" aria-hidden="true" /> {targetChapter.school_name}
+                </li>
+              )}
+            </ul>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {isOwnProfile ? (
+                <Link href="/profile/edit" className={buttonVariants({ variant: 'outline' })}>
+                  <Pencil data-icon="inline-start" aria-hidden="true" />
+                  Edit profile
+                </Link>
+              ) : (
+                <MessageStarter
+                  otherId={id}
+                  otherFirstName={profile.first_name ?? 'there'}
+                  otherCompany={displayCompany}
+                  viewerFirstName={viewerProfile?.first_name ?? ''}
+                />
               )}
             </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {!isOwnProfile && viewerIsActive && (
-          <form action={startConversation} className="block">
-            <Button
-              type="submit"
-              size="lg"
-              className="h-14 w-full gap-2 rounded-2xl text-base font-semibold shadow-md hover:shadow-lg"
-            >
-              <MessageSquare className="h-5 w-5" aria-hidden />
-              Message {profile.first_name}
-            </Button>
-          </form>
-        )}
-      </div>
+      {limitedProfile && (
+        <p className="rounded-lg bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+          {isOwnProfile
+            ? 'Your profile is empty. Add a bio, your job, and a contact method so brothers can find and reach you.'
+            : `${profile.first_name} hasn't shared more yet, or has limited who can see it. You can still send a message.`}
+        </p>
+      )}
 
-      {showBio && profile.bio && (
+      {hasBio && (
         <Card>
-          <CardContent className="pt-4">
-            <p className="text-sm leading-relaxed">{profile.bio}</p>
+          <CardHeader>
+            <CardTitle as="h2" className="heading-4">
+              About
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed whitespace-pre-line">{profile.bio}</p>
           </CardContent>
         </Card>
       )}
 
-      {showPositions && positions && positions.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Building2 className="h-4 w-4" /> Experience
-          </h2>
-          <div className="space-y-3">
-            {positions.map((pos) => (
-              <div
-                key={pos.id}
-                className={cn(
-                  'rounded-lg border bg-white p-4',
-                  pos.id === displayPosition?.id &&
-                    (positions?.length ?? 0) > 1 &&
-                    'border-primary/50 ring-1 ring-primary/20'
-                )}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium text-sm">{pos.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(pos as { companies?: { name?: string } }).companies?.name}
+      {hasExperience && (
+        <Card>
+          <CardHeader>
+            <CardTitle as="h2" className="heading-4 flex items-center gap-2">
+              <Building2 className="size-4 text-muted-foreground" aria-hidden="true" /> Experience
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="relative space-y-5 border-l border-border pl-5">
+              {sortedPositions.map((pos) => {
+                const company = (pos as { companies?: { name?: string } }).companies?.name
+                const field = (pos as { industries?: { name?: string } }).industries?.name
+                return (
+                  <li key={pos.id} className="relative">
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'absolute top-1.5 -left-[1.4375rem] size-2.5 rounded-full ring-4 ring-card',
+                        pos.is_current ? 'bg-primary' : 'bg-border'
+                      )}
+                    />
+                    <p className="font-medium">{pos.title}</p>
+                    {company && <p className="text-sm text-foreground/80">{company}</p>}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {pos.start_year ?? '—'} – {pos.is_current ? 'Present' : (pos.end_year ?? '—')}
+                      {field ? ` · ${field}` : ''}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {pos.start_year ?? '?'} — {pos.is_current ? 'Present' : (pos.end_year ?? '?')}
-                    </p>
-                  </div>
-                  <div className="flex gap-1 flex-wrap justify-end">
-                    {pos.id === displayPosition?.id && (positions?.length ?? 0) > 1 && (
-                      <Badge variant="default">Shown on profile</Badge>
-                    )}
-                    {pos.is_current && <Badge variant="secondary">Current</Badge>}
-                    {(pos as { industries?: { name?: string } }).industries?.name && (
-                      <Badge variant="secondary">
-                        {(pos as { industries?: { name?: string } }).industries?.name}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                  </li>
+                )
+              })}
+            </ol>
+          </CardContent>
+        </Card>
       )}
 
-      {showContact && contact && (contact.show_email || contact.show_phone || contact.show_linkedin) && (
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Contact</h2>
-          <div className="space-y-2">
-            {contact.show_email && contact.email && (
-              <a
-                href={`mailto:${contact.email}`}
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Mail className="h-4 w-4" /> {contact.email}
-              </a>
-            )}
-            {contact.show_phone && contact.phone && (
-              <a
-                href={`tel:${contact.phone}`}
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Phone className="h-4 w-4" /> {contact.phone}
-              </a>
-            )}
-            {contact.show_linkedin && contact.linkedin_url && (
-              <a
-                href={contact.linkedin_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <ExternalLink className="h-4 w-4" /> LinkedIn Profile
-              </a>
-            )}
-          </div>
-        </div>
+      {visibleContact && contact && (
+        <Card>
+          <CardHeader>
+            <CardTitle as="h2" className="heading-4">
+              Contact
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-border">
+              {contact.show_email && contact.email && (
+                <ContactRow kind="email" label="Email" value={contact.email} href={`mailto:${contact.email}`} />
+              )}
+              {contact.show_phone && contact.phone && (
+                <ContactRow kind="phone" label="Phone" value={contact.phone} href={`tel:${contact.phone}`} />
+              )}
+              {contact.show_linkedin && contact.linkedin_url && (
+                <ContactRow kind="linkedin" label="LinkedIn" value={contact.linkedin_url} href={contact.linkedin_url} external />
+              )}
+            </ul>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

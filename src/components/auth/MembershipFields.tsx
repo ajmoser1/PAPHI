@@ -36,7 +36,7 @@ export function BrokenInviteNotice() {
   return (
     <div
       role="status"
-      className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+      className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-warning-soft-foreground"
     >
       <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <p>
@@ -109,7 +109,7 @@ export function MembershipFields({
       {noChaptersAvailable && (
         <div
           role="status"
-          className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+          className="space-y-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-warning-soft-foreground"
         >
           <p>
             No chapters are live yet. Ask your chapter admin for an invite link, or request your

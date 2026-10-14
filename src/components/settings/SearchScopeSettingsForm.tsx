@@ -5,8 +5,8 @@ import { toast } from 'sonner'
 import { setSearchScope } from '@/actions/chapter-admin'
 import { SEARCH_SCOPE } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SelectField } from '@/components/ui/form-field'
 
 export function SearchScopeSettingsForm({ currentScope }: { currentScope: string }) {
   const [isPending, startTransition] = useTransition()
@@ -29,30 +29,21 @@ export function SearchScopeSettingsForm({ currentScope }: { currentScope: string
   }
 
   return (
-    <Card>
+    <Card id="search">
       <CardHeader>
-        <CardTitle>Search preference</CardTitle>
+        <CardTitle as="h2" className="heading-4">
+          Search default
+        </CardTitle>
+        <CardDescription>Where Find a Brother looks when you open it. The My chapter / All chapters switch on that page changes this too.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
-          <p className="text-sm text-muted-foreground">
-            Default scope for Find a Brother. You can still switch quickly with the toggle under
-            the search bar.
-          </p>
-          <div className="space-y-2">
-            <Label htmlFor="searchScope">Who do you want to search by default?</Label>
-            <select
-              id="searchScope"
-              name="searchScope"
-              defaultValue={scope}
-              className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
-            >
-              <option value={SEARCH_SCOPE.FRATERNITY}>All chapters in my fraternity</option>
-              <option value={SEARCH_SCOPE.CHAPTER}>My chapter only</option>
-            </select>
-          </div>
+        <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
+          <SelectField id="searchScope" name="searchScope" label="Search by default" defaultValue={scope}>
+            <option value={SEARCH_SCOPE.FRATERNITY}>All chapters in my fraternity</option>
+            <option value={SEARCH_SCOPE.CHAPTER}>My chapter only</option>
+          </SelectField>
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Saving…' : 'Save search preference'}
+            {isPending ? 'Saving…' : 'Save search default'}
           </Button>
         </form>
       </CardContent>

@@ -12,8 +12,7 @@ export function RetryButton({ label = 'Try again' }: { label?: string }) {
   return (
     <Button
       type="button"
-      size="lg"
-      className="h-11 w-full text-base md:h-10 md:text-sm"
+      className="w-full"
       disabled={isPending}
       onClick={() => startTransition(() => router.refresh())}
     >

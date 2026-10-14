@@ -5,6 +5,7 @@ import { TenantTheme } from '@/components/layout/TenantTheme'
 import { getTenantContext, getBrandingForUser } from '@/lib/tenant'
 import { getOwnProfileForApp } from '@/lib/profile'
 import { getUxPreviewModeForRole } from '@/lib/ux-preview'
+import { getUnreadConversations, totalUnread } from '@/lib/unread'
 import { ROLES, STATUS } from '@/lib/constants'
 import {
   ALUMNI_CONTACT_VISIBLE_SELECT,
@@ -56,23 +57,36 @@ export default async function AppLayout({
   const forceVisibleContact =
     profile.status === STATUS.ACTIVE && isMemberRole && !hasVisibleContact(contact)
 
+  // Photos are mandatory for every active member. The dialog gates the app
+  // (except Profile and Settings) until one is uploaded.
+  const needsPhoto = profile.status === STATUS.ACTIVE && isMemberRole && !profile.avatar_url
+
   const needsProfileSetup =
     profile.status === STATUS.ACTIVE &&
+    isMemberRole &&
     !forceVisibleContact &&
     !profile.profile_setup_completed_at
 
   const uxPreviewMode = await getUxPreviewModeForRole(profile.role)
+  const unreadCount =
+    profile.status === STATUS.ACTIVE ? totalUnread(await getUnreadConversations()) : 0
 
   return (
     <>
       <TenantTheme primaryColor={branding.primaryColor} accentColor={branding.accentColor} />
       <AppShell
-        role={profile.role}
-        firstName={profile.first_name ?? ''}
+        user={{
+          firstName: profile.first_name ?? '',
+          lastName: profile.last_name ?? '',
+          avatarUrl: profile.avatar_url,
+          role: profile.role,
+        }}
         status={profile.status}
-        brandTitle={branding.title}
+        brand={{ title: branding.title, logoUrl: branding.logoUrl }}
         showFounderLink={profile.role === ROLES.FOUNDER}
+        unreadCount={unreadCount}
         needsProfileSetup={needsProfileSetup}
+        needsPhoto={needsPhoto}
         forceVisibleContact={forceVisibleContact}
         uxPreviewMode={uxPreviewMode}
       >

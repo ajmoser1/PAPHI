@@ -31,7 +31,7 @@ export default async function PendingPage() {
       return (
         <Card>
           <CardHeader className="text-center">
-            <CardTitle as="h1" className="text-xl">Account not approved</CardTitle>
+            <CardTitle as="h1" className="heading-3">Account not approved</CardTitle>
             <CardDescription>
               Your membership request was not approved, or your account has been suspended.
               Contact your chapter admin if you think this is a mistake.
@@ -39,7 +39,7 @@ export default async function PendingPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <form action={logout}>
-              <Button type="submit" variant="outline" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm">
+              <Button type="submit" variant="outline" className="w-full">
                 Sign out
               </Button>
             </form>
@@ -52,7 +52,7 @@ export default async function PendingPage() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle as="h1" className="text-xl">Finishing account setup</CardTitle>
+        <CardTitle as="h1" className="heading-3">Finishing account setup</CardTitle>
         <CardDescription>
           We&apos;re still setting up your account. This usually takes a few seconds.
         </CardDescription>
@@ -60,7 +60,7 @@ export default async function PendingPage() {
       <CardContent className="flex flex-col gap-3">
         <RetryButton label="Check again" />
         <form action={logout}>
-          <Button type="submit" variant="ghost" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm">
+          <Button type="submit" variant="ghost" className="w-full">
             Sign out and try later
           </Button>
         </form>

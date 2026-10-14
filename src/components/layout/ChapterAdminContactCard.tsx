@@ -14,7 +14,7 @@ export function ChapterAdminContactCard({
   return (
     <div
       className={[
-        'rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950',
+        'rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground',
         className ?? '',
       ]
         .filter(Boolean)
@@ -37,9 +37,9 @@ export function ChapterAdminContactCard({
                           <a
                             key={`${admin.profileId}-email`}
                             href={`mailto:${channel.value}`}
-                            className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                            className="inline-flex items-center gap-1.5 text-warning-soft-foreground underline underline-offset-2 hover:text-foreground"
                           >
-                            <Mail className="h-3.5 w-3.5" />
+                            <Mail className="size-3.5" aria-hidden="true" />
                             {channel.value}
                           </a>
                         )
@@ -49,9 +49,9 @@ export function ChapterAdminContactCard({
                           <a
                             key={`${admin.profileId}-phone`}
                             href={`tel:${channel.value}`}
-                            className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                            className="inline-flex items-center gap-1.5 text-warning-soft-foreground underline underline-offset-2 hover:text-foreground"
                           >
-                            <Phone className="h-3.5 w-3.5" />
+                            <Phone className="size-3.5" aria-hidden="true" />
                             {channel.value}
                           </a>
                         )
@@ -62,9 +62,9 @@ export function ChapterAdminContactCard({
                           href={channel.value}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                          className="inline-flex items-center gap-1.5 text-warning-soft-foreground underline underline-offset-2 hover:text-foreground"
                         >
-                          <ExternalLink className="h-3.5 w-3.5" />
+                          <ExternalLink className="size-3.5" aria-hidden="true" />
                           LinkedIn
                         </a>
                       )
@@ -73,13 +73,13 @@ export function ChapterAdminContactCard({
                 ) : chapterContactEmail ? (
                   <a
                     href={`mailto:${chapterContactEmail}`}
-                    className="inline-flex items-center gap-1.5 text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                    className="inline-flex items-center gap-1.5 text-warning-soft-foreground underline underline-offset-2 hover:text-foreground"
                   >
-                    <Mail className="h-3.5 w-3.5" />
+                    <Mail className="size-3.5" aria-hidden="true" />
                     {chapterContactEmail}
                   </a>
                 ) : (
-                  <span className="text-amber-800/80">Ask a brother for their contact info</span>
+                  <span className="text-warning-soft-foreground/80">Ask a brother for their contact info</span>
                 )}
               </li>
             )
@@ -97,7 +97,7 @@ export function ChapterAdminContactCard({
           .
         </p>
       ) : (
-        <p className="mt-1 text-amber-900/80">
+        <p className="mt-1 text-warning-soft-foreground/80">
           Ask a brother for your chapter admin if you haven&apos;t been approved yet.
         </p>
       )}

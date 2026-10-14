@@ -142,7 +142,7 @@ export async function submitChapterRequest(formData: FormData) {
   }
 }
 
-export async function approveChapterRequest(requestId: string) {
+export async function approveChapterRequest(requestId: string): Promise<{ message?: string }> {
   const { adminClient } = await requireFounder()
 
   const { data: request } = await adminClient
@@ -152,7 +152,7 @@ export async function approveChapterRequest(requestId: string) {
     .single()
 
   if (!request || request.status !== 'pending') {
-    throw new Error('Request not found.')
+    return { message: 'Request not found.' }
   }
 
   const { data: fraternity } = await adminClient
@@ -161,7 +161,7 @@ export async function approveChapterRequest(requestId: string) {
     .eq('slug', request.fraternity_slug)
     .single()
 
-  if (!fraternity) throw new Error('Fraternity not found.')
+  if (!fraternity) return { message: 'Fraternity not found.' }
 
   const baseSlug = slugify(`${request.chapter_name}-${request.school_name}`)
   let slug = baseSlug
@@ -192,7 +192,7 @@ export async function approveChapterRequest(requestId: string) {
     .select('id, slug, invite_token, contact_email')
     .single()
 
-  if (chapterError) throw new Error(chapterError.message)
+  if (chapterError) return { message: chapterError.message }
 
   await adminClient
     .from('chapter_requests')
@@ -210,8 +210,8 @@ export async function approveChapterRequest(requestId: string) {
     // Chapter is live; founder dashboard invite link and assign-admin are fallbacks.
   }
 
-  revalidatePath('/founder')
-  return chapter
+  revalidatePath('/admin')
+  return {}
 }
 
 async function setupChapterAdmin(
@@ -265,7 +265,7 @@ async function inviteChapterContact(
   }
 }
 
-export async function rejectChapterRequest(requestId: string) {
+export async function rejectChapterRequest(requestId: string): Promise<{ message?: string }> {
   const { adminClient } = await requireFounder()
 
   const { error } = await adminClient
@@ -273,11 +273,12 @@ export async function rejectChapterRequest(requestId: string) {
     .update({ status: 'rejected' })
     .eq('id', requestId)
 
-  if (error) throw new Error(error.message)
-  revalidatePath('/founder')
+  if (error) return { message: error.message }
+  revalidatePath('/admin')
+  return {}
 }
 
-export async function assignChapterAdmin(chapterId: string, email: string) {
+export async function assignChapterAdmin(chapterId: string, email: string): Promise<{ message?: string }> {
   const { adminClient } = await requireFounder()
 
   const { data: authUsers } = await adminClient.auth.admin.listUsers()
@@ -286,20 +287,25 @@ export async function assignChapterAdmin(chapterId: string, email: string) {
   )
 
   if (!authUser) {
-    throw new Error('No user found with that email. They must register first.')
+    return { message: 'No user found with that email. They must register first.' }
   }
 
-  await promoteToChapterAdmin(adminClient, authUser.id, chapterId)
-  revalidatePath('/founder')
+  try {
+    await promoteToChapterAdmin(adminClient, authUser.id, chapterId)
+  } catch (err) {
+    return { message: err instanceof Error ? err.message : 'Could not assign the admin.' }
+  }
+  revalidatePath('/admin')
+  return {}
 }
 
-export async function assignChapterAdminFromForm(chapterId: string, formData: FormData) {
+export async function assignChapterAdminFromForm(chapterId: string, formData: FormData): Promise<{ message?: string }> {
   const email = (formData.get('email') as string)?.trim()
-  if (!email) throw new Error('Email required.')
-  await assignChapterAdmin(chapterId, email)
+  if (!email) return { message: 'Enter the admin\'s email.' }
+  return assignChapterAdmin(chapterId, email)
 }
 
-export async function suspendChapter(chapterId: string) {
+export async function suspendChapter(chapterId: string): Promise<{ message?: string }> {
   const { adminClient } = await requireFounder()
 
   const { error } = await adminClient
@@ -307,8 +313,9 @@ export async function suspendChapter(chapterId: string) {
     .update({ status: 'suspended' })
     .eq('id', chapterId)
 
-  if (error) throw new Error(error.message)
-  revalidatePath('/founder')
+  if (error) return { message: error.message }
+  revalidatePath('/admin')
+  return {}
 }
 
 export async function setUxPreviewMode(mode: string) {
@@ -330,7 +337,7 @@ export async function setUxPreviewMode(mode: string) {
   }
 
   revalidatePath('/', 'layout')
-  revalidatePath('/founder')
+  revalidatePath('/admin')
   revalidatePath('/members')
   revalidatePath('/profile/edit')
 }

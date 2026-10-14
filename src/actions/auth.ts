@@ -473,3 +473,21 @@ export async function logout() {
   await supabase.auth.signOut()
   redirect('/auth/login')
 }
+
+/** Changes the signed-in member's password without the email reset round trip. */
+export async function changePassword(_prev: { message?: string; success?: boolean } | undefined, formData: FormData) {
+  const password = String(formData.get('password') ?? '')
+  const confirm = String(formData.get('confirmPassword') ?? '')
+  if (!PASSWORD_RULE.test(password)) return { message: PASSWORD_REQUIREMENTS_HINT }
+  if (password !== confirm) return { message: 'The two passwords do not match.' }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { message: 'Sign in again to change your password.' }
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) return { message: error.message }
+  return { success: true }
+}

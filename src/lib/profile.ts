@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { SEARCH_SCOPE } from '@/lib/constants'
 import { applyUxPreviewToProfile, getUxPreviewModeForRole } from '@/lib/ux-preview'
@@ -5,6 +6,7 @@ import { applyUxPreviewToProfile, getUxPreviewModeForRole } from '@/lib/ux-previ
 export type AppShellProfile = {
   first_name: string | null
   last_name: string | null
+  avatar_url: string | null
   role: string
   status: string
   chapter_id: string | null
@@ -13,7 +15,7 @@ export type AppShellProfile = {
 }
 
 const APP_PROFILE_SELECT =
-  'first_name, last_name, role, status, chapter_id, search_scope, profile_setup_completed_at' as const
+  'first_name, last_name, avatar_url, role, status, chapter_id, search_scope, profile_setup_completed_at' as const
 
 const PROFILE_EDIT_SELECT =
   'id, first_name, last_name, role, status, chapter_id, avatar_url, bio, graduation_year, chapter, visibility_scope, privacy_settings, search_scope, featured_position_id, profile_setup_completed_at' as const
@@ -73,16 +75,17 @@ async function fetchOwnProfileRow<T extends string>(
   return null
 }
 
-export async function getOwnProfileForApp(): Promise<AppShellProfile | null> {
+export const getOwnProfileForApp = cache(async function getOwnProfileForApp(): Promise<AppShellProfile | null> {
   const row = await fetchOwnProfileRow(APP_PROFILE_SELECT)
   let profile: AppShellProfile | null = row ? (row as AppShellProfile) : null
 
   if (!profile) {
-    const minimal = await fetchOwnProfileRow('first_name, last_name, role, status')
+    const minimal = await fetchOwnProfileRow('first_name, last_name, avatar_url, role, status')
     if (!minimal) return null
     profile = {
       first_name: (minimal.first_name as string | null) ?? null,
       last_name: (minimal.last_name as string | null) ?? null,
+      avatar_url: (minimal.avatar_url as string | null) ?? null,
       role: minimal.role as string,
       status: minimal.status as string,
       chapter_id: null,
@@ -93,7 +96,7 @@ export async function getOwnProfileForApp(): Promise<AppShellProfile | null> {
 
   const mode = await getUxPreviewModeForRole(profile.role)
   return applyUxPreviewToProfile(profile, mode)
-}
+})
 
 export type ProfileEditRow = {
   id: string

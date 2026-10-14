@@ -1,86 +1,83 @@
 'use client'
 
-import { useState } from 'react'
-import { Sidebar } from './Sidebar'
-import { TopNav } from './TopNav'
+import { useMemo } from 'react'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import type { UxPreviewMode } from '@/lib/ux-preview-shared'
+import { AppHeader } from './AppHeader'
+import type { Brand } from './BrandMark'
 import { PendingApprovalBanner } from './PendingApprovalBanner'
+import { PhotoRequiredDialog } from './PhotoRequiredDialog'
 import { PostApprovalSetupNotice } from './PostApprovalSetupNotice'
+import { SidebarNav } from './SidebarNav'
+import type { UserMenuUser } from './UserMenu'
 import { UxPreviewBanner } from './UxPreviewBanner'
-import type { UxPreviewMode } from '@/lib/ux-preview'
+import { buildNav } from './nav-config'
 
-interface AppShellProps {
+export type AppShellProps = {
   children: React.ReactNode
-  role: string
-  firstName: string
+  user: UserMenuUser
   status: string
-  brandTitle?: string
+  brand: Brand
   showFounderLink?: boolean
   unreadCount?: number
   needsProfileSetup?: boolean
   forceVisibleContact?: boolean
+  needsPhoto?: boolean
   uxPreviewMode?: UxPreviewMode | null
 }
 
 export function AppShell({
   children,
-  role,
-  firstName,
+  user,
   status,
-  brandTitle = 'PA PHI',
+  brand,
   showFounderLink = false,
   unreadCount = 0,
   needsProfileSetup = false,
   forceVisibleContact = false,
+  needsPhoto = false,
   uxPreviewMode = null,
 }: AppShellProps) {
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const groups = useMemo(
+    () => buildNav({ role: user.role, status, showFounderLink }),
+    [user.role, status, showFounderLink]
+  )
   const isPending = status === 'pending_approval'
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[oklch(0.97_0.005_78)]">
-      <div
-        className={[
-          'flex-shrink-0 overflow-hidden',
-          'transition-[width] duration-300 ease-in-out',
-          mobileOpen ? 'w-60' : 'w-0',
-          'lg:w-60',
-        ].join(' ')}
+    <TooltipProvider>
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-lg bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
-        <Sidebar
-          role={role}
-          status={status}
-          brandTitle={brandTitle}
-          showFounderLink={showFounderLink}
-          unreadCount={unreadCount}
-          onNavClick={() => setMobileOpen(false)}
-        />
+        Skip to content
+      </a>
+      <div className="flex min-h-dvh bg-page">
+        <SidebarNav brand={brand} groups={groups} unreadCount={unreadCount} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <AppHeader brand={brand} groups={groups} user={user} status={status} unreadCount={unreadCount} />
+          {uxPreviewMode && <UxPreviewBanner mode={uxPreviewMode} />}
+          {isPending && <PendingApprovalBanner />}
+          {needsPhoto && (
+            <PhotoRequiredDialog
+              initials={`${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase() || '?'}
+            />
+          )}
+          {!needsPhoto && (forceVisibleContact || needsProfileSetup) && (
+            <PostApprovalSetupNotice
+              forceVisibleContact={forceVisibleContact}
+              storageKey={
+                uxPreviewMode === 'post_approval'
+                  ? 'post-approval-setup-dismissed:preview'
+                  : 'post-approval-setup-dismissed'
+              }
+            />
+          )}
+          <main id="main" tabIndex={-1} className="mx-auto w-full max-w-content flex-1 p-4 outline-none md:p-6 lg:p-8">
+            {children}
+          </main>
+        </div>
       </div>
-
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <TopNav
-          firstName={firstName}
-          role={role}
-          status={status}
-          brandTitle={brandTitle}
-          mobileOpen={mobileOpen}
-          onToggle={() => setMobileOpen((o) => !o)}
-        />
-        {uxPreviewMode && <UxPreviewBanner mode={uxPreviewMode} />}
-        {isPending && <PendingApprovalBanner />}
-        {(forceVisibleContact || needsProfileSetup) && (
-          <PostApprovalSetupNotice
-            forceVisibleContact={forceVisibleContact}
-            storageKey={
-              uxPreviewMode === 'post_approval'
-                ? 'post-approval-setup-dismissed:preview'
-                : 'post-approval-setup-dismissed'
-            }
-          />
-        )}
-        <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
-          {children}
-        </main>
-      </div>
-    </div>
+    </TooltipProvider>
   )
 }

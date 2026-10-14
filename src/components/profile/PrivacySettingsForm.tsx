@@ -1,9 +1,11 @@
 'use client'
 
+import { useActionState, useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { updatePrivacySettings } from '@/actions/chapter-admin'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { SelectField, FormAlert } from '@/components/ui/form-field'
 
 type PrivacySettings = {
   show_contact_to?: string
@@ -17,58 +19,74 @@ interface Props {
 }
 
 const OPTIONS = [
-  { value: 'chapter', label: 'My chapter only' },
   { value: 'fraternity', label: 'All chapters in my fraternity' },
+  { value: 'chapter', label: 'My chapter only' },
   { value: 'hidden', label: 'Hidden' },
 ]
 
+const HINTS: Record<string, string> = {
+  fraternity: 'Any approved brother, at any chapter, can see this.',
+  chapter: 'Only brothers from your own chapter can see this.',
+  hidden: 'Nobody sees this. You can still message and be messaged.',
+}
+
+type State = { message?: string; success?: boolean } | undefined
+
 export function PrivacySettingsForm({ visibilityScope, privacySettings }: Props) {
+  const [state, action, isPending] = useActionState<State, FormData>(
+    async (_prev, fd) => (await updatePrivacySettings(fd)) as State,
+    undefined
+  )
+
+  const [, startTransition] = useTransition()
+  const [scope, setScope] = useState(visibilityScope)
+
+  useEffect(() => {
+    if (state?.success) toast.success('Privacy settings saved.')
+  }, [state])
+
   return (
-    <Card>
+    <Card id="privacy">
       <CardHeader>
-        <CardTitle>Privacy settings</CardTitle>
+        <CardTitle as="h2" className="heading-4">
+          Privacy
+        </CardTitle>
+        <CardDescription>Who can find you and what they see. Work experience is always visible to brothers so you can be found by company and field.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={updatePrivacySettings} className="space-y-4 max-w-lg">
-          <div className="space-y-1">
-            <Label htmlFor="visibilityScope">Who can find me in search?</Label>
-            <select
-              id="visibilityScope"
-              name="visibilityScope"
-              defaultValue={visibilityScope}
-              className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
-            >
-              {OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {[
-            { name: 'showContactTo', label: 'Contact info visible to', default: privacySettings.show_contact_to },
-            { name: 'showBioTo', label: 'Bio visible to', default: privacySettings.show_bio_to },
-          ].map(({ name, label, default: defaultVal }) => (
-            <div key={name} className="space-y-1">
-              <Label htmlFor={name}>{label}</Label>
-              <select
-                id={name}
-                name={name}
-                defaultValue={defaultVal ?? 'fraternity'}
-                className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
-              >
-                {OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          ))}
-
-          <p className="text-sm text-muted-foreground rounded-md border bg-muted/30 px-3 py-2">
-            Work experience is always visible to brothers in your fraternity so members can find you
-            by company and career field.
-          </p>
-
-          <Button type="submit">Save privacy settings</Button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            const fd = new FormData(e.currentTarget)
+            startTransition(() => action(fd))
+          }}
+          className="max-w-lg space-y-4"
+        >
+          <FormAlert message={state?.success ? undefined : state?.message} />
+          <SelectField id="visibilityScope" name="visibilityScope" label="Who can find me in search" value={scope} onChange={(e) => setScope(e.target.value)} hint={HINTS[scope]}>
+            {OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField id="showContactTo" name="showContactTo" label="Who sees my contact details" defaultValue={privacySettings.show_contact_to ?? 'fraternity'} hint="Only the details you ticked as visible on your profile.">
+            {OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField id="showBioTo" name="showBioTo" label="Who sees my bio" defaultValue={privacySettings.show_bio_to ?? 'fraternity'}>
+            {OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </SelectField>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Saving…' : 'Save privacy'}
+          </Button>
         </form>
       </CardContent>
     </Card>

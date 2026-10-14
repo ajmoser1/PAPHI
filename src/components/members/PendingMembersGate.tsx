@@ -1,52 +1,44 @@
+import { Clock } from 'lucide-react'
 import type { ChapterAdminContactsResult } from '@/lib/chapter-admins'
 import { ChapterAdminContactCard } from '@/components/layout/ChapterAdminContactCard'
 
 // Placeholder cards only — pending members must never receive real directory
 // rows (CSS blur is not access control; the HTML would still contain them).
-const PLACEHOLDER_COUNT = 8
+const PLACEHOLDER_COUNT = 6
 
-export function PendingMembersGate({
-  adminContacts,
-}: {
-  adminContacts: ChapterAdminContactsResult
-}) {
+export function PendingMembersGate({ adminContacts }: { adminContacts: ChapterAdminContactsResult }) {
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-        <p className="font-semibold text-primary">Approval required to view members</p>
-        <p className="mt-1 text-muted-foreground">
-          Your account is waiting for chapter admin approval. Member profiles unlock once
-          you&apos;re approved.
-        </p>
-      </div>
-
-      <ChapterAdminContactCard contacts={adminContacts} />
-
-      <div className="relative">
-        <div
-          className="pointer-events-none select-none grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 blur-sm opacity-60"
-          aria-hidden
-        >
-          {Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => (
-            <div key={i} className="rounded-xl overflow-hidden shadow-sm border border-border">
-              <div className="relative aspect-square bg-primary/8">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/default-avatar.svg" alt="" className="w-full h-full object-cover" />
-              </div>
-              <div className="bg-white px-3 py-2.5 space-y-1.5">
-                <div className="h-3.5 w-3/4 rounded bg-muted" />
-                <div className="h-3 w-1/2 rounded bg-muted/70" />
-              </div>
+    <div className="relative">
+      <ul
+        className="pointer-events-none grid gap-3 opacity-60 blur-sm select-none sm:grid-cols-2 lg:grid-cols-3"
+        aria-hidden
+      >
+        {Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => (
+          <li key={i} className="flex items-center gap-3 rounded-xl bg-card p-3 ring-1 ring-foreground/10">
+            <div className="size-14 shrink-0 rounded-full bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 w-2/3 rounded bg-muted" />
+              <div className="h-3 w-1/2 rounded bg-muted/70" />
+              <div className="h-3 w-1/3 rounded bg-muted/70" />
             </div>
-          ))}
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center p-6">
-          <div className="max-w-sm rounded-xl border bg-background/95 px-5 py-4 text-center shadow-sm backdrop-blur-sm">
-            <p className="font-semibold text-primary">Profiles locked until approval</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reach out to your chapter admin above if you&apos;ve been waiting a while.
-            </p>
+          </li>
+        ))}
+      </ul>
+      <div className="absolute inset-0 flex items-start justify-center p-4 sm:items-center">
+        <div className="w-full max-w-lg space-y-4 rounded-2xl bg-card/95 p-5 shadow-lg ring-1 ring-foreground/10 backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-soft-foreground">
+              <Clock className="size-5" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="heading-3">Your account is awaiting approval</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A chapter admin reviews every new member. Profiles and messaging unlock as soon as you are
+                approved. Finishing your profile now helps them recognize you.
+              </p>
+            </div>
           </div>
+          <ChapterAdminContactCard contacts={adminContacts} />
         </div>
       </div>
     </div>

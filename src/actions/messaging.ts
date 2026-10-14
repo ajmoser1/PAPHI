@@ -1,15 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { requireActiveProfile } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
 const MAX_MESSAGE_LENGTH = 4000
-
-async function requireActive() {
-  const { supabase, userId } = await requireActiveProfile()
-  return { supabase, userId }
-}
 
 export async function createConversation(otherUserId: string): Promise<string> {
   const { supabase, userId } = await requireActiveProfile()
@@ -85,4 +81,22 @@ export async function sendMessage(conversationId: string, body: string): Promise
 
   if (error) throw new Error(error.message)
   revalidatePath(`/messages/${conversationId}`)
+}
+
+/** Records that the caller has seen everything in this conversation up to now. */
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const { supabase } = await requireActiveProfile()
+  // Best-effort: a missing RPC (migration not yet applied) must not break the thread.
+  await supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId })
+}
+
+/**
+ * Opens (or reuses) a conversation with a member, sends the first message, and
+ * lands the sender in the thread. Used by the profile page's message starter.
+ */
+export async function startConversationWithMessage(otherUserId: string, body: string): Promise<void> {
+  const conversationId = await createConversation(otherUserId)
+  const trimmed = body.trim()
+  if (trimmed) await sendMessage(conversationId, trimmed)
+  redirect(`/messages/${conversationId}`)
 }

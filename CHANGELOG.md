@@ -7,6 +7,48 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 ---
 
+## [Unreleased] — 2026-10-12
+
+### Visual overhaul: one branded shell, mandatory photos, admin dashboard — 2026-10-12
+
+The app looked "bland and sterile" and was really three apps (purple member app, white admin pages, un-themed auth). This pass gives it one visual language ("collegiate editorial": Spectral headings, chapter color as accent, calm warm surfaces), makes the chapter theme actually tenant-safe, and adds the product changes the owner asked for. Branch `ui-overhaul`.
+
+**Theme and foundation**
+- Every brand-dependent token now derives from two inputs (`--brand-primary`, `--brand-accent`) with CSS relative color syntax, so a crimson chapter gets a crimson sidebar and focus ring instead of the SAE purple. `TenantTheme` sets only those two (plus server-computed contrast foregrounds) and is applied to auth pages too. `color-mix()` fallback for browsers without relative colors.
+- Type scale (`heading-display` … `heading-4`, `eyebrow`), shadow and motion tokens, semantic status tokens (success / warning / info soft variants), one page surface (`bg-page`), global `prefers-reduced-motion`. Spectral now loads 400–700 so heading weights vary.
+- Controls are 44px on phones / 40px on desktop everywhere (buttons, inputs, selects). The 13 hand-written auth overrides are gone.
+- New primitives: select, checkbox, switch, alert-dialog, skeleton, tooltip, alert, empty, popover, tabs, progress, collapsible, table.
+- Route states: `loading.tsx` (app, members, messages), `error.tsx` with retry, `not-found.tsx` (shell and root).
+
+**Shell**
+- Admin and founder routes moved under `(app)` and share the branded `AppShell`: sidebar with nav groups and `aria-current`, slim header with page title, Messages bell with live unread count, and a user menu (profile, settings, admin, sign out). Mobile nav is a Base UI sheet (overlay, Esc, focus trap) instead of a sidebar that squeezed the page. Skip link added.
+
+**Product changes (requested)**
+- **Photos are mandatory.** Active members without a photo get a blocking dialog with the upload inside it (drag-and-drop, camera on phones); Profile and Settings stay reachable. Profile setup only completes once a photo is on file. Google sign-ups import the Google picture server-side into the avatars bucket (CSP unchanged).
+- **"Waiting on you"** at the top of Find a Brother: members who messaged you, with unread counts and a Reply button. Requires migration `20261012000000_unread_messages_home_tips.sql` (`conversation_reads`, `mark_conversation_read()`, `get_unread_conversations()`, `profiles.home_tips_dismissed_at`). Backfills existing threads as read. Verified on a local Postgres fixture with RLS tests and the splinter lint.
+- **Admin is one dashboard** (`/admin`): overview stats, approvals (decline confirms), searchable member table (remove confirms), branding with a live preview and contrast check, companies and career fields in tabs with search, founder sections (chapter requests, chapters with copyable invite links, assign admin) and a "Preview as…" menu. Old `/admin/*` and `/founder` redirect to anchors. Admin and founder actions return errors instead of throwing.
+- **Purpose made explicit:** "What you can do here" tiles on Find a Brother (dismissal stored on the profile), a message starter on member profiles with referral / advice / hello templates, teaching search placeholder and empty states, step indicator across signup, profile completeness bar, "How it works" on the landing page.
+
+**Screens**
+- Find a Brother: roster cards (56px photo, name, company, class / chapter), single toolbar with a filter popover, real segmented My chapter / All chapters control, removable filter chips, paging, skeletons, empty state with actions. Pending members see one calm gated card.
+- Member profile: centered header card, back-to-results link that keeps the search, timeline experience, contact rows with copy, "Edit profile" on your own page, limited-profile notice.
+- Profile edit: one form with a sticky save bar and inline errors (name, bio, class year, contact details and their visibility), avatar row, experience with a dashed add button and delete confirmation.
+- Messages: unread rows, relative times, day separators, per-message sending / failed-with-retry, labelled controls, `dvh`-based thread height.
+- Settings: cards without separators, pending/success on every save, explanations under privacy options, switches for contact visibility, inline password change.
+- Landing: Register as the primary CTA, "How it works", stats strip, "Start a chapter" band, signed-in visitors go to `/members`. Start-chapter form keeps values on a failed submit.
+
+**Audit fixes (2026-10-13)** after a three-pass bug review of the overhaul:
+- Google photo import only fetches `https://*.googleusercontent.com` for Google sign-ins, with no redirects, a streamed 5MB cap, and a magic-byte check (user metadata is client-writable, so the URL was an SSRF surface).
+- Forms submitted through `useActionState` no longer lose the member's edits when validation fails (React 19 resets the form after any form action); the profile and privacy forms submit through a transition instead.
+- Card, dialog, and empty-state titles now really use the heading scale (`cn()` teaches tailwind-merge that `heading-*` conflicts with `text-*`/`font-*`/`leading-*`).
+- Photo dialog offers the photo library on phones; "Take photo" is a separate camera input.
+- Search box no longer drops keystrokes or filters during a slow server round trip.
+- Admins and the founder are exempt from the member-only phone/contact requirement and the post-approval nudge; an admin with no chapter sees a friendly empty state instead of the error page.
+- "Waiting on you" looks up senders with the service role (they may be hidden from search) and counts only rendered rows; results are de-duplicated across search pages.
+- Chapter landing crests from Supabase storage render through `<img>` (no `next/image` remote config needed); message times and day separators render after hydration; smaller a11y and copy fixes.
+
+- Notable: `src/app/globals.css`, `src/lib/colors.ts`, `src/components/layout/{AppShell,AppHeader,SidebarNav,MobileNav,UserMenu,NavList,nav-config,PageHeader,PhotoRequiredDialog}.tsx`, `src/components/members/*`, `src/components/messaging/*`, `src/components/admin/*`, `src/components/founder/*`, `src/app/(app)/admin/page.tsx`, `src/lib/unread.ts`, `src/lib/avatars.ts`, `supabase/migrations/20261012000000_unread_messages_home_tips.sql`
+
 ## [Unreleased] — 2026-08-09
 
 Signup / first-session UX overhaul + founder-only preview tooling + Profile/Settings split + live Find a Brother search.

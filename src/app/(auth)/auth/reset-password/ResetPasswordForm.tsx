@@ -14,7 +14,7 @@ export function ResetPasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h1" className="text-xl">Choose a new password</CardTitle>
+        <CardTitle as="h1" className="heading-3">Choose a new password</CardTitle>
         <CardDescription>Enter and confirm your new password below.</CardDescription>
       </CardHeader>
       <form action={action} aria-busy={isPending}>
@@ -52,7 +52,7 @@ export function ResetPasswordForm() {
           />
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm" disabled={isPending}>
+          <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? 'Updating…' : 'Update password'}
           </Button>
           <p className="text-center text-sm text-muted-foreground">

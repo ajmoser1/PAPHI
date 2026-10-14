@@ -17,14 +17,12 @@ import { cn } from '@/lib/utils'
  * without making desktop forms feel oversized.
  */
 
-export const CONTROL_HEIGHT = 'h-11 md:h-10'
-
 const nativeControlClassName = cn(
   'w-full min-w-0 rounded-lg border border-input bg-transparent px-3 text-base transition-colors outline-none',
   'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
   'aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20',
   'disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-  CONTROL_HEIGHT
+  'h-11 md:h-10'
 )
 
 function describedBy(...ids: Array<string | undefined>) {
@@ -77,7 +75,7 @@ type FormFieldProps = Omit<React.ComponentProps<typeof Input>, 'id'> &
 export function FormField({ id, label, hint, error, labelEnd, className, ...input }: FormFieldProps) {
   return (
     <FieldShell id={id} label={label} hint={hint} error={error} labelEnd={labelEnd}>
-      {(a11y) => <Input id={id} className={cn(CONTROL_HEIGHT, 'px-3', className)} {...a11y} {...input} />}
+      {(a11y) => <Input id={id} className={className} {...a11y} {...input} />}
     </FieldShell>
   )
 }
@@ -92,7 +90,7 @@ export function PasswordField({ id, label, hint, error, labelEnd, className, ...
           <Input
             id={id}
             type={visible ? 'text' : 'password'}
-            className={cn(CONTROL_HEIGHT, 'px-3 pr-12', className)}
+            className={cn('pr-12', className)}
             {...a11y}
             {...input}
           />

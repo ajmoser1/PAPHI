@@ -53,7 +53,7 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h1" className="text-xl">Welcome back</CardTitle>
+        <CardTitle as="h1" className="heading-3">Welcome back</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -96,7 +96,7 @@ export function LoginForm() {
               </Link>
             }
           />
-          <Button type="submit" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm" disabled={isPending}>
+          <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
@@ -106,8 +106,8 @@ export function LoginForm() {
         <Link
           href="/auth/register"
           className={cn(
-            buttonVariants({ variant: 'outline', size: 'lg' }),
-            'h-11 w-full text-base md:h-10 md:text-sm'
+            buttonVariants({ variant: 'outline' }),
+            'w-full'
           )}
         >
           Create an account

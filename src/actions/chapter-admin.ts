@@ -17,7 +17,7 @@ const brandingSchema = z.object({
   accentColor: cssColor.optional(),
 })
 
-export async function updateChapterBranding(formData: FormData) {
+export async function updateChapterBranding(formData: FormData): Promise<{ message?: string }> {
   const { profile, adminClient } = await requireChapterAdmin()
 
   const chapterId =
@@ -25,7 +25,7 @@ export async function updateChapterBranding(formData: FormData) {
       ? (formData.get('chapterId') as string) || profile.chapter_id
       : profile.chapter_id
 
-  if (!chapterId) throw new Error('Chapter ID required.')
+  if (!chapterId) return { message: 'Chapter ID required.' }
 
   const validated = brandingSchema.safeParse({
     displayTitle: formData.get('displayTitle'),
@@ -35,7 +35,7 @@ export async function updateChapterBranding(formData: FormData) {
     accentColor: formData.get('accentColor') || undefined,
   })
 
-  if (!validated.success) throw new Error('Invalid branding data.')
+  if (!validated.success) return { message: 'Invalid branding data.' }
 
   const { error } = await adminClient
     .from('chapters')
@@ -48,11 +48,13 @@ export async function updateChapterBranding(formData: FormData) {
     })
     .eq('id', chapterId)
 
-  if (error) throw new Error(error.message)
+  if (error) return { message: error.message }
 
-  revalidatePath('/admin/customize')
+  revalidatePath('/admin')
+  revalidatePath('/', 'layout')
   revalidatePath('/')
   revalidatePath('/members')
+  return {}
 }
 
 export async function setSearchScope(scope: 'fraternity' | 'chapter') {
@@ -83,7 +85,7 @@ export async function updatePrivacySettings(formData: FormData) {
     showBioTo: formData.get('showBioTo'),
   })
 
-  if (!validated.success) throw new Error('Invalid privacy settings.')
+  if (!validated.success) return { message: 'Those privacy settings are not valid. Reload and try again.' }
 
   const updates = {
     visibility_scope: validated.data.visibilityScope,
@@ -96,7 +98,9 @@ export async function updatePrivacySettings(formData: FormData) {
 
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
 
-  if (error) throw new Error(error.message)
+  if (error) return { message: error.message }
   revalidatePath('/settings')
   revalidatePath('/profile/edit')
+  revalidatePath('/members')
+  return { success: true }
 }

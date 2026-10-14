@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isMembershipIncomplete, STATUS } from '@/lib/constants'
+import { importAvatarFromUrl } from '@/lib/avatars'
 
 const ALLOWED_NEXT_PATHS = new Set(['/auth/reset-password'])
 
@@ -31,9 +32,17 @@ export async function GET(request: Request) {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('status, role, chapter_id')
+          .select('status, role, chapter_id, avatar_url')
           .eq('id', user.id)
           .maybeSingle()
+
+        // Google sign-ins carry a profile picture; use it so the member
+        // starts with a photo instead of hitting the photo requirement.
+        const picture = user.user_metadata?.picture ?? user.user_metadata?.avatar_url
+        const viaGoogle = user.app_metadata?.provider === 'google' || user.identities?.some((i) => i.provider === 'google')
+        if (profile && !profile.avatar_url && viaGoogle && typeof picture === 'string') {
+          await importAvatarFromUrl(user.id, picture)
+        }
 
         if (!isMembershipIncomplete(profile)) {
           if (profile!.status === STATUS.PENDING_APPROVAL) {

@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAdminRole, isMembershipIncomplete, ROLES } from '@/lib/constants'
 import { getChapterSlugFromHost } from '@/lib/tenant'
-import { resolveUxPreviewMode } from '@/lib/ux-preview'
+import { resolveUxPreviewMode } from '@/lib/ux-preview-shared'
 
 const CHAPTER_SLUG_COOKIE = 'chapter_slug'
 const UX_PREVIEW_COOKIE = 'ux_preview'

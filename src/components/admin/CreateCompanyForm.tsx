@@ -4,8 +4,7 @@ import { useTransition } from 'react'
 import { toast } from 'sonner'
 import { createCompany } from '@/actions/admin'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormField, SelectField } from '@/components/ui/form-field'
 
 type IndustryOption = { id: string; name: string }
 
@@ -14,7 +13,7 @@ export function CreateCompanyForm({ industries }: { industries: IndustryOption[]
 
   return (
     <form
-      className="grid grid-cols-2 gap-4"
+      className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
       onSubmit={(e) => {
         e.preventDefault()
         const form = e.currentTarget
@@ -29,34 +28,18 @@ export function CreateCompanyForm({ industries }: { industries: IndustryOption[]
         })
       }}
     >
-      <div className="space-y-1">
-        <Label htmlFor="name">Company name</Label>
-        <Input id="name" name="name" required />
-      </div>
-      <div className="space-y-1">
-        <Label htmlFor="industryId">Industry</Label>
-        <select
-          id="industryId"
-          name="industryId"
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-        >
-          <option value="">— Select industry —</option>
-          {industries.map((i) => (
-            <option key={i.id} value={i.id}>
-              {i.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="col-span-2 space-y-1">
-        <Label htmlFor="website">Website</Label>
-        <Input id="website" name="website" type="url" placeholder="https://..." />
-      </div>
-      <div className="col-span-2">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Adding…' : 'Add company'}
-        </Button>
-      </div>
+      <FormField id="new-company-name" name="name" label="Company name" required placeholder="e.g. Goldman Sachs" />
+      <SelectField id="new-company-industry" name="industryId" label="Career field">
+        <option value="">Choose a field</option>
+        {industries.map((i) => (
+          <option key={i.id} value={i.id}>
+            {i.name}
+          </option>
+        ))}
+      </SelectField>
+      <Button type="submit" disabled={isPending} className="sm:mb-0">
+        {isPending ? 'Adding…' : 'Add company'}
+      </Button>
     </form>
   )
 }

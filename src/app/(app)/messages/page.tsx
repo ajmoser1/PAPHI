@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { MessageSquareText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getOwnProfileForApp } from '@/lib/profile'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { MessageSquare } from 'lucide-react'
+import { getUnreadConversations } from '@/lib/unread'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { buttonVariants } from '@/components/ui/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { ConversationRow } from '@/components/messaging/ConversationRow'
 
 export default async function MessagesPage() {
   const supabase = await createClient()
@@ -13,81 +17,85 @@ export default async function MessagesPage() {
   const profile = await getOwnProfileForApp()
   if (profile?.status === 'pending_approval') redirect('/members')
 
-  const { data: conversations } = await supabase
-    .from('conversations')
-    .select(`
-      id,
-      participant_a,
-      participant_b,
-      last_message_at,
-      messages(body, created_at, sender_id)
-    `)
-    .or(`participant_a.eq.${user.id},participant_b.eq.${user.id}`)
-    .order('last_message_at', { ascending: false })
-    .limit(1, { foreignTable: 'messages' })
+  const [{ data: conversations }, unread] = await Promise.all([
+    supabase
+      .from('conversations')
+      .select(`
+        id,
+        participant_a,
+        participant_b,
+        last_message_at,
+        messages(body, created_at, sender_id)
+      `)
+      .or(`participant_a.eq.${user.id},participant_b.eq.${user.id}`)
+      .order('last_message_at', { ascending: false })
+      .order('created_at', { foreignTable: 'messages', ascending: false })
+      .limit(1, { foreignTable: 'messages' }),
+    getUnreadConversations(),
+  ])
 
-  // Fetch other participant profiles
-  const otherIds = conversations?.map((c) =>
-    c.participant_a === user.id ? c.participant_b : c.participant_a
-  ) ?? []
+  const unreadByConversation = Object.fromEntries(unread.map((u) => [u.conversation_id, u.unread_count]))
+
+  const otherIds = conversations?.map((c) => (c.participant_a === user.id ? c.participant_b : c.participant_a)) ?? []
 
   const { data: otherProfiles } = otherIds.length
-    ? await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url')
-        .in('id', otherIds)
+    ? await supabase.from('profiles').select('id, first_name, last_name, avatar_url').in('id', otherIds)
     : { data: [] }
 
   const profileMap = Object.fromEntries((otherProfiles ?? []).map((p) => [p.id, p]))
+  const total = conversations?.length ?? 0
+  const unreadTotal = unread.reduce((n, u) => n + u.unread_count, 0)
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Messages</h1>
-        <p className="text-muted-foreground">{conversations?.length ?? 0} conversations</p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        title="Messages"
+        description={
+          total === 0
+            ? 'Referral requests, intros, and quick questions all start here.'
+            : `${total} ${total === 1 ? 'conversation' : 'conversations'}${unreadTotal ? ` · ${unreadTotal} unread` : ''}`
+        }
+      />
 
       {!conversations?.length ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>No messages yet.</p>
-          <p className="text-sm mt-1">Find an alumnus and click "Message" to start a conversation.</p>
-        </div>
+        <Empty className="py-14">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="size-12 rounded-xl [&_svg]:size-6">
+              <MessageSquareText aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle className="heading-3">No messages yet</EmptyTitle>
+            <EmptyDescription>
+              Find a brother at a company you care about and ask for a referral, an intro, or advice. They expect it.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Link href="/members" className={buttonVariants()}>
+              Find a brother to message
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : (
-        <div className="space-y-2">
+        <ul className="space-y-2">
           {conversations.map((conv) => {
             const otherId = conv.participant_a === user.id ? conv.participant_b : conv.participant_a
             const other = profileMap[otherId]
-            const initials = other ? `${other.first_name[0]}${other.last_name[0]}`.toUpperCase() : '?'
-            const lastMsg = (conv as any).messages?.[0]
-
+            const lastMsg = (conv as { messages?: Array<{ body: string; created_at: string; sender_id: string }> }).messages?.[0]
             return (
-              <Link key={conv.id} href={`/messages/${conv.id}`}>
-                <div className="flex items-center gap-3 rounded-lg border bg-white p-4 hover:bg-zinc-50 transition-colors cursor-pointer">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={other?.avatar_url ?? undefined} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">
-                      {other ? `${other.first_name} ${other.last_name}` : 'Unknown'}
-                    </p>
-                    {lastMsg && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {lastMsg.sender_id === user.id ? 'You: ' : ''}{lastMsg.body}
-                      </p>
-                    )}
-                  </div>
-                  {conv.last_message_at && (
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(conv.last_message_at).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              </Link>
+              <li key={conv.id}>
+                <ConversationRow
+                  href={`/messages/${conv.id}`}
+                  firstName={other?.first_name ?? 'Unknown'}
+                  lastName={other?.last_name ?? ''}
+                  avatarUrl={other?.avatar_url ?? null}
+                  preview={lastMsg?.body ?? null}
+                  mine={lastMsg?.sender_id === user.id}
+                  at={conv.last_message_at ?? lastMsg?.created_at ?? null}
+                  unreadCount={unreadByConversation[conv.id] ?? 0}
+                />
+              </li>
             )
           })}
-        </div>
+        </ul>
       )}
     </div>
   )

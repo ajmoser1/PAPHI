@@ -10,22 +10,32 @@ import { FormAlert, FormField, PasswordField } from '@/components/ui/form-field'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
+type FormValues = { chapterName: string; schoolName: string; contactName: string; contactEmail: string }
 type FormState =
-  | { message?: string; success?: boolean; needsEmailConfirmation?: boolean }
+  | { message?: string; success?: boolean; needsEmailConfirmation?: boolean; values?: FormValues }
   | undefined
 
 async function submitRequest(_prev: FormState, formData: FormData): Promise<FormState> {
-  return submitChapterRequest(formData)
+  // React resets the form after an action runs; echo the values back so a failed submit keeps them.
+  const values: FormValues = {
+    chapterName: String(formData.get('chapterName') ?? ''),
+    schoolName: String(formData.get('schoolName') ?? ''),
+    contactName: String(formData.get('contactName') ?? ''),
+    contactEmail: String(formData.get('contactEmail') ?? ''),
+  }
+  const result = await submitChapterRequest(formData)
+  return result?.success ? result : { ...result, values }
 }
 
 export function StartChapterForm() {
   const [state, action, isPending] = useActionState(submitRequest, undefined)
+  const values = state?.values
 
   if (state?.success) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle as="h1" className="text-xl">Request submitted</CardTitle>
+          <CardTitle as="h1" className="heading-3">Request submitted</CardTitle>
           <CardDescription>
             {state.needsEmailConfirmation
               ? 'Check your email to confirm your account. Once we approve your chapter, sign in with the password you just created.'
@@ -33,7 +43,7 @@ export function StartChapterForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <Link href="/auth/login" className={cn(buttonVariants({ size: 'lg' }), 'h-11 w-full text-base md:h-10 md:text-sm')}>
+          <Link href="/auth/login" className={cn(buttonVariants(), 'w-full')}>
             Go to sign in
           </Link>
           <Link href="/" className="text-center text-sm text-muted-foreground underline underline-offset-4">
@@ -54,7 +64,7 @@ export function StartChapterForm() {
           <ArrowLeft className="size-3.5" aria-hidden="true" />
           Back to registration
         </Link>
-        <CardTitle as="h1" className="text-xl">Start a chapter</CardTitle>
+        <CardTitle as="h1" className="heading-3">Start a chapter</CardTitle>
         <CardDescription>
           Bring your chapter onto the platform and become its first admin. Free for all SAE chapters.
         </CardDescription>
@@ -62,15 +72,16 @@ export function StartChapterForm() {
       <form action={action} aria-busy={isPending}>
         <CardContent className="space-y-4">
           <FormAlert message={state?.message} />
-          <FormField id="chapterName" name="chapterName" label="Chapter name" placeholder="e.g. PA PHI" autoComplete="organization" required />
+          <FormField id="chapterName" name="chapterName" label="Chapter name" placeholder="e.g. PA PHI" autoComplete="organization" defaultValue={values?.chapterName} required />
           <FormField
             id="schoolName"
             name="schoolName"
             label="School"
             placeholder="e.g. Carnegie Mellon University"
+            defaultValue={values?.schoolName}
             required
           />
-          <FormField id="contactName" name="contactName" label="Your name" autoComplete="name" required />
+          <FormField id="contactName" name="contactName" label="Your name" autoComplete="name" defaultValue={values?.contactName} required />
           <FormField
             id="contactEmail"
             name="contactEmail"
@@ -79,6 +90,7 @@ export function StartChapterForm() {
             autoComplete="email"
             inputMode="email"
             hint="This becomes your sign-in email and the chapter's contact address."
+            defaultValue={values?.contactEmail}
             required
           />
           <PasswordField
@@ -101,7 +113,7 @@ export function StartChapterForm() {
             </Link>
             .
           </p>
-          <Button type="submit" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm" disabled={isPending}>
+          <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? 'Submitting…' : 'Create account & submit request'}
           </Button>
         </CardContent>

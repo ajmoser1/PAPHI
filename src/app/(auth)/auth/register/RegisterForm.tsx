@@ -16,6 +16,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { FormAlert, FormField, PasswordField } from '@/components/ui/form-field'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { StepIndicator } from '@/components/forms/StepIndicator'
 
 export function RegisterForm({
   chapters,
@@ -40,7 +41,7 @@ export function RegisterForm({
     return (
       <Card>
         <CardHeader>
-          <CardTitle as="h1" className="text-xl">Check your email</CardTitle>
+          <CardTitle as="h1" className="heading-3">Check your email</CardTitle>
           <CardDescription>One more step and your account is ready.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -48,7 +49,7 @@ export function RegisterForm({
           <p className="text-sm text-muted-foreground">
             Didn&apos;t get it? Check your spam folder, or sign in and we&apos;ll offer to send it again.
           </p>
-          <Link href="/auth/login" className={cn(buttonVariants({ size: 'lg' }), 'h-11 w-full text-base md:h-10 md:text-sm')}>
+          <Link href="/auth/login" className={cn(buttonVariants(), 'w-full')}>
             Go to sign in
           </Link>
         </CardContent>
@@ -59,7 +60,8 @@ export function RegisterForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h1" className="text-xl">Create an account</CardTitle>
+        <StepIndicator steps={['Create your account', 'Your chapter', 'Make yourself findable']} current={1} className="mb-1" />
+        <CardTitle as="h1" className="heading-3">Create your account</CardTitle>
         <CardDescription>
           {describeInvite(inviteChapter, inviter, 'Join your chapter network to find brothers for referrals, mentorship, and opportunities.')}
         </CardDescription>
@@ -180,8 +182,7 @@ export function RegisterForm({
           </p>
           <Button
             type="submit"
-            size="lg"
-            className="h-11 w-full text-base md:h-10 md:text-sm"
+            className="w-full"
             disabled={isPending || !canSubmit}
           >
             {isPending ? 'Creating account…' : 'Create account'}

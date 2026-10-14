@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { AffiliationBranding } from '@/components/layout/AffiliationBranding'
 import { CrestBackground } from '@/components/layout/CrestBackground'
+import { TenantThemeFromRequest } from '@/components/layout/TenantThemeFromRequest'
 
 export default function AuthLayout({
   children,
@@ -8,7 +9,8 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="relative flex min-h-screen min-h-[100dvh] flex-col items-center justify-center gap-8 overflow-x-hidden bg-gradient-to-b from-background via-background to-muted/30 px-4 py-10">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-x-hidden bg-gradient-to-b from-background via-background to-muted/30 px-4 py-10">
+      <TenantThemeFromRequest />
       <CrestBackground />
       <main id="main" className="relative z-10 w-full max-w-md">
         {children}

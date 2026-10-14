@@ -14,6 +14,7 @@ import { SIGNUP_FIELD_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { FormAlert, FormField } from '@/components/ui/form-field'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { StepIndicator } from '@/components/forms/StepIndicator'
 
 export type SignupPrefill = {
   firstName: string
@@ -52,7 +53,8 @@ export function CompleteSignupForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h1" className="text-xl">Tell us about yourself</CardTitle>
+        <StepIndicator steps={['Create your account', 'Your chapter', 'Make yourself findable']} current={2} className="mb-1" />
+        <CardTitle as="h1" className="heading-3">Which chapter are you?</CardTitle>
         <CardDescription>
           {describeInvite(
             inviteChapter,
@@ -162,8 +164,7 @@ export function CompleteSignupForm({
           </p>
           <Button
             type="submit"
-            size="lg"
-            className="h-11 w-full text-base md:h-10 md:text-sm"
+            className="w-full"
             disabled={isPending || !canSubmit}
           >
             {isPending ? 'Saving…' : 'Continue'}

@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { SEARCH_SCOPE } from '@/lib/constants'
@@ -59,7 +60,7 @@ export function getChapterSlugFromHost(host: string): string | null {
   return null
 }
 
-export async function getTenantContext(): Promise<TenantContext> {
+async function loadTenantContext(): Promise<TenantContext> {
   const headersList = await headers()
   const cookieStore = await cookies()
   const host = headersList.get('host') ?? 'localhost'
@@ -182,3 +183,6 @@ export function getBrandingForUser(
     mode: 'platform' as const,
   }
 }
+
+/** Per-request memoized: layouts and pages can both call this without extra queries. */
+export const getTenantContext = cache(loadTenantContext)

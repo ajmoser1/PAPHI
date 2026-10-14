@@ -13,8 +13,8 @@ export function FeedbackCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="h-4 w-4" />
+        <CardTitle as="h2" className="heading-4 flex items-center gap-2">
+          <MessageSquare className="size-4 text-muted-foreground" aria-hidden="true" />
           Questions or feedback
         </CardTitle>
       </CardHeader>
@@ -23,8 +23,8 @@ export function FeedbackCard() {
           Found a bug, have an idea, or need help? Email us — we read every message, especially
           during launch.
         </p>
-        <a href={mailto} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-2')}>
-          <Mail className="h-4 w-4" />
+        <a href={mailto} className={cn(buttonVariants({ variant: 'outline' }), 'gap-2')}>
+          <Mail aria-hidden="true" />
           {email}
         </a>
       </CardContent>

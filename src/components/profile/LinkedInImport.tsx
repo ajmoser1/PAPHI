@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { ExternalLink, Loader2, CheckSquare, Square, Upload } from 'lucide-react'
+import { FileUp, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { parseLinkedInPdf, type ExtractedPosition } from '@/actions/linkedin'
 import { createPosition } from '@/actions/profile'
@@ -111,16 +111,11 @@ export function LinkedInImport({ industries }: Props) {
           accept="application/pdf"
           className="hidden"
           onChange={handleFileChange}
+          aria-label="Choose a LinkedIn profile PDF"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground gap-2"
-          onClick={() => inputRef.current?.click()}
-        >
-          <ExternalLink className="h-4 w-4" />
-          Import from LinkedIn PDF
+        <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => inputRef.current?.click()}>
+          <FileUp data-icon="inline-start" aria-hidden="true" />
+          Import from a LinkedIn PDF
         </Button>
       </>
     )
@@ -128,8 +123,8 @@ export function LinkedInImport({ industries }: Props) {
 
   if (step === 'parsing') {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground" role="status">
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
         Reading your LinkedIn PDF…
       </div>
     )
@@ -137,42 +132,30 @@ export function LinkedInImport({ industries }: Props) {
 
   // Review step
   return (
-    <div className="rounded-lg border bg-white p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">
-          Found {extracted.length} position{extracted.length > 1 ? 's' : ''} — select which to import
-        </p>
-        <button
-          type="button"
-          onClick={toggleAll}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
+    <fieldset className="space-y-3 rounded-xl bg-muted/40 p-4 ring-1 ring-foreground/10">
+      <div className="flex items-center justify-between gap-3">
+        <legend className="text-sm font-medium">
+          Found {extracted.length} {extracted.length === 1 ? 'position' : 'positions'}. Choose which to import.
+        </legend>
+        <button type="button" onClick={toggleAll} className="min-h-8 text-xs font-medium text-primary underline-offset-4 hover:underline">
           {selected.size === extracted.length ? 'Deselect all' : 'Select all'}
         </button>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="space-y-1">
         {extracted.map((pos, i) => (
-          <li
-            key={i}
-            onClick={() => toggle(i)}
-            className="flex items-start gap-3 rounded-md p-2 cursor-pointer hover:bg-muted/50 transition-colors"
-          >
-            <span className="mt-0.5 text-primary flex-shrink-0">
-              {selected.has(i)
-                ? <CheckSquare className="h-4 w-4" />
-                : <Square className="h-4 w-4 text-muted-foreground" />}
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{pos.title}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {pos.company_name}
-                {pos.industry ? ` · ${pos.industry}` : ''}
-                {pos.start_year
-                  ? ` · ${pos.start_year}–${pos.is_current ? 'Present' : (pos.end_year ?? '?')}`
-                  : ''}
-              </p>
-            </div>
+          <li key={i}>
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md p-2 transition-colors hover:bg-card">
+              <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)} className="mt-1 size-4 accent-primary" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium">{pos.title}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {pos.company_name}
+                  {pos.industry ? ` · ${pos.industry}` : ''}
+                  {pos.start_year ? ` · ${pos.start_year}–${pos.is_current ? 'Present' : (pos.end_year ?? '?')}` : ''}
+                </span>
+              </span>
+            </label>
           </li>
         ))}
       </ul>
@@ -185,9 +168,15 @@ export function LinkedInImport({ industries }: Props) {
           onClick={handleImport}
           className="gap-2"
         >
-          {isPending
-            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Importing…</>
-            : <><Upload className="h-3.5 w-3.5" /> Import {selected.size} position{selected.size !== 1 ? 's' : ''}</>}
+          {isPending ? (
+            <>
+              <Loader2 data-icon="inline-start" className="animate-spin" aria-hidden="true" /> Importing…
+            </>
+          ) : (
+            <>
+              <Upload data-icon="inline-start" aria-hidden="true" /> Import {selected.size} {selected.size === 1 ? 'position' : 'positions'}
+            </>
+          )}
         </Button>
         <Button
           type="button"
@@ -199,6 +188,6 @@ export function LinkedInImport({ industries }: Props) {
           Cancel
         </Button>
       </div>
-    </div>
+    </fieldset>
   )
 }

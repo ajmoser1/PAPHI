@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 const STORAGE_KEY = 'pending-approval-banner-dismissed'
 
@@ -33,11 +32,11 @@ export function PendingApprovalBanner() {
   if (dismissed) return null
 
   return (
-    <div role="status" className="border-b border-amber-200 bg-amber-50 px-4 py-3 sm:px-6">
-      <div className="mx-auto flex max-w-6xl items-start justify-between gap-3">
+    <div role="status" className="border-b border-warning/40 bg-warning-soft px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-content items-start justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <p className="font-semibold text-amber-950">Your account is pending approval</p>
-          <p className="text-sm text-amber-900/90">
+          <p className="font-semibold text-warning-soft-foreground">Your account is pending approval</p>
+          <p className="text-sm text-warning-soft-foreground/90">
             Finish your profile. Member profiles stay locked until a chapter admin approves you.
             On Find a Brother you can see who to contact if you&apos;ve been waiting.
           </p>
@@ -46,7 +45,7 @@ export function PendingApprovalBanner() {
           {!onProfilePage && (
             <Link
               href="/profile/edit"
-              className={cn(buttonVariants({ size: 'sm' }), 'h-9 bg-primary text-primary-foreground')}
+              className={buttonVariants({ size: 'sm' })}
             >
               Set up profile
             </Link>
@@ -55,7 +54,7 @@ export function PendingApprovalBanner() {
             type="button"
             variant="ghost"
             size="icon"
-            className="size-9 text-amber-900 hover:bg-amber-100"
+            className="text-warning-soft-foreground hover:bg-warning/20"
             onClick={dismiss}
             aria-label="Dismiss banner"
           >

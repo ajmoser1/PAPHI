@@ -5,33 +5,8 @@ import * as z from 'zod'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { requireNotSuspended as requireAuth } from '@/lib/auth'
 import { hasVisibleContact, VISIBLE_CONTACT_REQUIRED_MESSAGE } from '@/lib/contact'
-
-const AVATAR_TYPES: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-}
-
-/** Check magic bytes so a spoofed Content-Type (e.g. SVG sent as image/png) is rejected. */
-async function hasImageSignature(file: File, type: string) {
-  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer())
-  switch (type) {
-    case 'image/jpeg':
-      return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff
-    case 'image/png':
-      return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47
-    case 'image/gif':
-      return b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38
-    case 'image/webp':
-      return (
-        b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-        b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
-      )
-    default:
-      return false
-  }
-}
+import { AVATAR_TYPES, hasImageSignature } from '@/lib/avatars'
+import { isAdminRole } from '@/lib/constants'
 
 /** Escape LIKE/ILIKE wildcards so user input matches literally. */
 function escapeLike(value: string) {
@@ -243,13 +218,16 @@ async function maybeCompleteProfileSetup(userId: string) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('status, profile_setup_completed_at')
+    .select('status, profile_setup_completed_at, avatar_url')
     .eq('id', userId)
     .maybeSingle()
 
   if (!profile || profile.status !== 'active' || profile.profile_setup_completed_at) {
     return
   }
+
+  // Photos are mandatory: setup is not complete until one is on file.
+  if (!profile.avatar_url) return
 
   const { data: contact } = await admin
     .from('alumni_contact')
@@ -303,8 +281,20 @@ export async function uploadAvatar(formData: FormData) {
     .eq('id', userId)
 
   if (updateError) return { message: updateError.message }
+  await maybeCompleteProfileSetup(userId)
   revalidatePath('/profile/edit')
+  revalidatePath('/members')
   return { success: true, url: data.publicUrl }
+}
+
+/** Hides the "what you can do here" tiles on Find a Brother for this member, on every device. */
+export async function dismissHomeTips() {
+  const { supabase, userId } = await requireAuth()
+  await supabase
+    .from('profiles')
+    .update({ home_tips_dismissed_at: new Date().toISOString() })
+    .eq('id', userId)
+  revalidatePath('/members')
 }
 
 export async function removeAvatar() {
@@ -463,4 +453,95 @@ export async function deletePosition(positionId: string) {
   revalidatePath('/profile/edit')
   revalidatePath('/members')
   return { success: true }
+}
+
+export type SaveProfileState =
+  | { success: true; errors?: undefined; message?: undefined }
+  | { success?: false; message?: string; errors?: Record<string, string[] | undefined> }
+  | undefined
+
+const saveProfileSchema = z.object({
+  firstName: z.string().trim().min(2, { error: 'Enter your first name.' }),
+  lastName: z.string().trim().min(2, { error: 'Enter your last name.' }),
+  bio: z.string().trim().max(1000, { error: 'Keep your bio under 1,000 characters.' }).optional(),
+  graduationYear: z.coerce.number().int().min(1900, { error: 'Enter a four-digit graduation year.' }).max(2100, { error: 'Enter a four-digit graduation year.' }).optional(),
+  email: z.string().trim().email({ error: 'Enter a valid email address.' }).optional().or(z.literal('')),
+  phone: z.string().trim().refine((v) => v === '' || v.replace(/\D/g, '').length >= 10, { error: 'Enter a phone number with at least 10 digits.' }),
+  linkedinUrl: z.string().trim().url({ error: 'Enter the full LinkedIn URL, starting with https://.' }).optional().or(z.literal('')),
+})
+
+/**
+ * One save for the whole profile form: name, bio, class year, contact details
+ * and who can see them. Returns field errors instead of throwing.
+ */
+export async function saveProfile(_prev: SaveProfileState, formData: FormData): Promise<SaveProfileState> {
+  const { supabase, userId } = await requireAuth()
+
+  const validated = saveProfileSchema.safeParse({
+    firstName: formData.get('firstName'),
+    lastName: formData.get('lastName'),
+    bio: (formData.get('bio') as string | null) || undefined,
+    graduationYear: formData.get('graduationYear') ? Number(formData.get('graduationYear')) : undefined,
+    email: (formData.get('email') as string | null) ?? '',
+    phone: (formData.get('phone') as string | null) ?? '',
+    linkedinUrl: (formData.get('linkedinUrl') as string | null) ?? '',
+  })
+
+  if (!validated.success) {
+    return { errors: validated.error.flatten().fieldErrors as Record<string, string[] | undefined> }
+  }
+
+  const d = validated.data
+  const email = d.email || null
+  const linkedin_url = d.linkedinUrl || null
+  const show_email = formData.get('showEmail') === 'on'
+  const show_phone = formData.get('showPhone') === 'on'
+  const show_linkedin = formData.get('showLinkedin') === 'on'
+
+  // Members must be reachable (phone + something visible). Admins and the
+  // founder run the chapter and are exempt, as they were before.
+  const { data: me } = await supabase.from('profiles').select('role').eq('id', userId).single()
+  const contactRequired = !isAdminRole(me?.role ?? '')
+  if (contactRequired) {
+    if (!d.phone) return { errors: { phone: ['Enter a phone number with at least 10 digits.'] } }
+    if (!hasVisibleContact({ email, phone: d.phone, linkedin_url, show_email, show_phone, show_linkedin })) {
+      return { message: VISIBLE_CONTACT_REQUIRED_MESSAGE, errors: { showPhone: [VISIBLE_CONTACT_REQUIRED_MESSAGE] } }
+    }
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      first_name: d.firstName,
+      last_name: d.lastName,
+      bio: d.bio || null,
+      graduation_year: d.graduationYear || null,
+    })
+    .eq('id', userId)
+  if (profileError) return { message: profileError.message }
+
+  const { error: contactError } = await supabase
+    .from('alumni_contact')
+    .upsert(
+      { profile_id: userId, email, phone: d.phone || null, linkedin_url, show_email, show_phone, show_linkedin },
+      { onConflict: 'profile_id' }
+    )
+  if (contactError) return { message: contactError.message }
+
+  await maybeCompleteProfileSetup(userId)
+
+  revalidatePath('/profile/edit')
+  revalidatePath('/settings')
+  revalidatePath('/members')
+  return { success: true }
+}
+
+/** Hides the profile-completeness card for good once the profile is complete. */
+export async function dismissCompletenessCard() {
+  const { supabase, userId } = await requireAuth()
+  await supabase
+    .from('profiles')
+    .update({ profile_completeness_dismissed_at: new Date().toISOString() })
+    .eq('id', userId)
+  revalidatePath('/profile/edit')
 }

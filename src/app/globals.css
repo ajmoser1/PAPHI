@@ -4,42 +4,69 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---------------------------------------------------------------------------
+ * Theme mappings. Everything brand-dependent is mapped `inline` so a per-chapter
+ * <style> override of --brand-* flows through to the generated utilities.
+ * ------------------------------------------------------------------------- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-page: var(--page);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-spectral), "Times New Roman", serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-accent: var(--brand-accent);
   --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
   --color-gold: var(--gold);
+  --color-gold-foreground: var(--brand-accent-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-soft-foreground: var(--destructive-soft-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -49,13 +76,77 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  /* SAE purple */
-  --primary: oklch(0.32 0.16 295);
-  --primary-foreground: oklch(0.98 0 0);
-  /* SAE gold */
-  --gold: oklch(0.75 0.13 78);
+/* Static scales: Tailwind generates utilities from these and they never change
+ * at runtime, so they live in a plain @theme block. */
+@theme {
+  --text-display: 2.75rem;
+  --text-display--line-height: 1.08;
+  --text-h1: 2rem;
+  --text-h1--line-height: 1.15;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.2;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.3;
+  --text-h4: 1.0625rem;
+  --text-h4--line-height: 1.4;
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.2;
 
+  --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px oklch(0 0 0 / 0.08), 0 1px 2px oklch(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px oklch(0 0 0 / 0.08), 0 2px 4px oklch(0 0 0 / 0.04);
+  --shadow-lg: 0 12px 32px oklch(0 0 0 / 0.12), 0 4px 8px oklch(0 0 0 / 0.05);
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+
+  --container-content: 72rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tokens. The only two values a chapter sets are --brand-primary and
+ * --brand-accent (plus their contrast foregrounds, computed on the server).
+ * Everything else derives from them with CSS relative color syntax, so a
+ * crimson chapter gets a crimson sidebar and ring, not the SAE purple.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Brand inputs. Defaults are SAE purple and gold. */
+  --brand-primary: oklch(0.32 0.16 295);
+  --brand-accent: oklch(0.75 0.13 78);
+  --brand-primary-foreground: oklch(0.98 0 0);
+  --brand-accent-foreground: oklch(0.15 0 0);
+
+  /* Derived brand */
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
+  --primary-hover: oklch(from var(--brand-primary) calc(l + 0.06) c h);
+  --primary-soft: oklch(from var(--brand-primary) 0.96 calc(c * 0.25) h);
+  --ring: oklch(from var(--brand-primary) calc(l + 0.18) calc(c * 0.9) h);
+  --accent: oklch(from var(--brand-accent) 0.95 calc(c * 0.35) h);
+  --accent-foreground: var(--brand-primary);
+  --gold: var(--brand-accent);
+
+  /* Sidebar: always a dark band regardless of how light the brand color is. */
+  --sidebar: oklch(from var(--brand-primary) clamp(0.22, calc(l - 0.04), 0.30) min(c, 0.15) h);
+  --sidebar-hover: oklch(from var(--sidebar) calc(l + 0.06) c h);
+  --sidebar-accent: oklch(from var(--sidebar) calc(l + 0.10) c h);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(from var(--sidebar) calc(l + 0.14) c h / 0.6);
+  --sidebar-foreground: oklch(from var(--brand-primary) 0.96 calc(c * 0.1) h);
+  --sidebar-primary: var(--brand-accent);
+  --sidebar-primary-foreground: var(--brand-accent-foreground);
+  --sidebar-ring: var(--brand-accent);
+
+  /* Page surface: a whisper of the accent hue over off-white. */
+  --page: oklch(from var(--brand-accent) 0.975 calc(c * 0.05) h);
+
+  --chart-1: var(--brand-primary);
+  --chart-2: var(--brand-accent);
+  --chart-3: oklch(from var(--brand-primary) 0.6 calc(c * 0.7) calc(h + 40));
+  --chart-4: oklch(from var(--brand-accent) 0.55 calc(c * 0.8) calc(h - 40));
+  --chart-5: oklch(0.45 0 0);
+
+  /* Neutrals */
   --background: oklch(0.98 0 0);
   --foreground: oklch(0.13 0 0);
   --card: oklch(1 0 0);
@@ -65,27 +156,115 @@
   --secondary: oklch(0.96 0 0);
   --secondary-foreground: oklch(0.2 0 0);
   --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.52 0 0);
-  --accent: oklch(0.75 0.13 78 / 15%);
-  --accent-foreground: oklch(0.32 0.16 295);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.90 0 0);
-  --input: oklch(0.90 0 0);
-  --ring: oklch(0.32 0.16 295 / 40%);
-  --chart-1: oklch(0.32 0.16 295);
-  --chart-2: oklch(0.75 0.13 78);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.88 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.28 0.14 295);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.75 0.13 78);
-  --sidebar-primary-foreground: oklch(0.13 0 0);
-  --sidebar-accent: oklch(0.38 0.14 295);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.38 0.14 295);
-  --sidebar-ring: oklch(0.75 0.13 78);
+
+  /* Status (semantic, never brand-derived) */
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-soft: oklch(0.96 0.03 25);
+  --destructive-soft-foreground: oklch(0.4 0.17 27);
+  --success: oklch(0.55 0.15 150);
+  --success-soft: oklch(0.96 0.04 150);
+  --success-soft-foreground: oklch(0.35 0.1 150);
+  --warning: oklch(0.7 0.16 60);
+  --warning-soft: oklch(0.97 0.05 70);
+  --warning-soft-foreground: oklch(0.4 0.11 55);
+  --info: oklch(0.55 0.14 240);
+  --info-soft: oklch(0.96 0.03 240);
+  --info-soft-foreground: oklch(0.35 0.1 240);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+}
+
+/* Browsers without relative color syntax get color-mix() approximations. */
+@supports not (color: oklch(from red l c h)) {
+  :root {
+    --primary-hover: color-mix(in oklch, var(--brand-primary) 88%, white);
+    --primary-soft: color-mix(in oklch, var(--brand-primary) 8%, white);
+    --ring: color-mix(in oklch, var(--brand-primary) 70%, white);
+    --accent: color-mix(in oklch, var(--brand-accent) 15%, white);
+    --sidebar: color-mix(in oklch, var(--brand-primary) 85%, black);
+    --sidebar-hover: color-mix(in oklch, var(--sidebar) 92%, white);
+    --sidebar-accent: color-mix(in oklch, var(--sidebar) 85%, white);
+    --sidebar-border: color-mix(in oklch, var(--sidebar) 75%, white);
+    --sidebar-foreground: oklch(0.96 0 0);
+    --page: oklch(0.975 0.004 78);
+    --chart-3: color-mix(in oklch, var(--brand-primary) 60%, white);
+    --chart-4: color-mix(in oklch, var(--brand-accent) 60%, black);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Utilities
+ * ------------------------------------------------------------------------- */
+@utility duration-fast {
+  --tw-duration: var(--duration-fast);
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  --tw-duration: var(--duration-base);
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  --tw-duration: var(--duration-slow);
+  transition-duration: var(--duration-slow);
+}
+
+/* Heading styles. Named heading-* because --text-h1 already generates text-h1. */
+@utility heading-display {
+  font-family: var(--font-heading);
+  font-size: var(--text-display);
+  line-height: var(--text-display--line-height);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--primary);
+  text-wrap: balance;
+}
+@utility heading-1 {
+  font-family: var(--font-heading);
+  font-size: var(--text-h1);
+  line-height: var(--text-h1--line-height);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--primary);
+  text-wrap: balance;
+}
+@utility heading-2 {
+  font-family: var(--font-heading);
+  font-size: var(--text-h2);
+  line-height: var(--text-h2--line-height);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--foreground);
+  text-wrap: balance;
+}
+@utility heading-3 {
+  font-family: var(--font-heading);
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  font-weight: 600;
+  color: var(--foreground);
+}
+@utility heading-4 {
+  font-family: var(--font-heading);
+  font-size: var(--text-h4);
+  line-height: var(--text-h4--line-height);
+  font-weight: 600;
+  color: var(--foreground);
+}
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 
 @layer base {
@@ -98,9 +277,29 @@
   html {
     @apply font-sans;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-heading);
-    letter-spacing: 0.02em;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-fast: 0ms;
+      --duration-base: 0ms;
+      --duration-slow: 0ms;
+    }
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -111,8 +310,10 @@
   line-height: 1.7;
 }
 .legal-doc h1 {
-  font-size: 1.875rem;
-  line-height: 1.2;
+  font-size: var(--text-h1);
+  line-height: var(--text-h1--line-height);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--primary);
   margin-bottom: 0.25rem;
 }
@@ -122,13 +323,13 @@
   margin-bottom: 2rem;
 }
 .legal-doc h2 {
-  font-size: 1.25rem;
-  line-height: 1.3;
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
   margin-top: 2.5rem;
   margin-bottom: 0.75rem;
 }
 .legal-doc h3 {
-  font-size: 1.05rem;
+  font-size: var(--text-h4);
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
 }

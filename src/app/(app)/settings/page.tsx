@@ -6,7 +6,7 @@ import { ContactVisibilityForm } from '@/components/settings/ContactVisibilityFo
 import { SearchScopeSettingsForm } from '@/components/settings/SearchScopeSettingsForm'
 import { AccountSettingsCard } from '@/components/settings/AccountSettingsCard'
 import { FeedbackCard } from '@/components/settings/FeedbackCard'
-import { Separator } from '@/components/ui/separator'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -23,20 +23,17 @@ export default async function SettingsPage() {
   if (!profile) redirect('/auth/pending')
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-primary tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Control how you appear to brothers and how Find a Brother searches by default.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        title="Settings"
+        description="Who can find you, what they see, and your sign-in details."
+      />
 
       <PrivacySettingsForm
         visibilityScope={profile.visibility_scope ?? 'fraternity'}
         privacySettings={profile.privacy_settings ?? {}}
       />
 
-      <Separator />
 
       <ContactVisibilityForm
         contact={
@@ -46,22 +43,19 @@ export default async function SettingsPage() {
                 phone: contact.phone,
                 linkedin_url: contact.linkedin_url,
                 show_email: contact.show_email ?? false,
-                show_phone: contact.show_phone ?? false,
+                show_phone: contact.show_phone ?? true,
                 show_linkedin: contact.show_linkedin ?? false,
               }
             : null
         }
       />
 
-      <Separator />
 
       <SearchScopeSettingsForm currentScope={profile.search_scope ?? 'fraternity'} />
 
-      <Separator />
 
       <AccountSettingsCard email={user.email ?? null} />
 
-      <Separator />
 
       <FeedbackCard />
     </div>

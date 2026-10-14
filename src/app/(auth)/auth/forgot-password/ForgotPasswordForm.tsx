@@ -13,7 +13,7 @@ export function ForgotPasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h1" className="text-xl">Reset your password</CardTitle>
+        <CardTitle as="h1" className="heading-3">Reset your password</CardTitle>
         <CardDescription>
           Enter your email and we&apos;ll send you a link to choose a new password.
         </CardDescription>
@@ -43,7 +43,7 @@ export function ForgotPasswordForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           {!state?.success && (
-            <Button type="submit" size="lg" className="h-11 w-full text-base md:h-10 md:text-sm" disabled={isPending}>
+            <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? 'Sending…' : 'Send reset link'}
             </Button>
           )}
