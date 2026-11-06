@@ -16,12 +16,12 @@ export function AvatarUpload({ avatarUrl, initials = '?' }: Props) {
   })
 
   return (
-    <div className="flex items-center gap-4">
-      <Avatar className="size-20 shrink-0">
+    <div className="flex shrink-0 flex-col items-start gap-3">
+      <Avatar className="size-24 shrink-0">
         {preview && <AvatarImage src={preview} alt="" />}
         <AvatarFallback className="bg-primary-soft text-xl font-semibold text-primary">{initials}</AvatarFallback>
       </Avatar>
-      <div className="min-w-0 space-y-2">
+      <div className="min-w-0 space-y-1.5">
         <input
           ref={inputRef}
           type="file"

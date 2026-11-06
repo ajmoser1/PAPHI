@@ -7,8 +7,11 @@ import { Section } from '@/components/layout/Section'
 import { Textarea } from '@/components/ui/textarea'
 import { FormAlert, FormField, FieldShell } from '@/components/ui/form-field'
 import { StickySaveBar } from '@/components/forms/StickySaveBar'
+import { AvatarUpload } from './AvatarUpload'
 
 type Props = {
+  avatarUrl: string | null
+  initials: string
   profile: { first_name: string; last_name: string; bio: string | null; graduation_year: number | null }
   contact: {
     email: string | null
@@ -43,7 +46,7 @@ function snapshot(form: HTMLFormElement | null): string {
 }
 
 /** Name, bio, class year, contact details and their visibility, saved together. */
-export function ProfileForm({ profile, contact, chapterLabel, contactRequired = true }: Props) {
+export function ProfileForm({ avatarUrl, initials, profile, contact, chapterLabel, contactRequired = true }: Props) {
   const [state, action, isPending] = useActionState<SaveProfileState, FormData>(saveProfile, undefined)
   const [, startTransition] = useTransition()
   const formRef = useRef<HTMLFormElement>(null)
@@ -95,9 +98,12 @@ export function ProfileForm({ profile, contact, chapterLabel, contactRequired = 
 
       <Section id="basics" title="About you">
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="firstName" name="firstName" label="First name" defaultValue={profile.first_name} required autoComplete="given-name" error={err('firstName')} />
-            <FormField id="lastName" name="lastName" label="Last name" defaultValue={profile.last_name} required autoComplete="family-name" error={err('lastName')} />
+          <div id="photo" className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+            <AvatarUpload avatarUrl={avatarUrl} initials={initials} />
+            <div className="w-full space-y-3 sm:max-w-xs">
+              <FormField id="firstName" name="firstName" label="First name" defaultValue={profile.first_name} required autoComplete="given-name" error={err('firstName')} />
+              <FormField id="lastName" name="lastName" label="Last name" defaultValue={profile.last_name} required autoComplete="family-name" error={err('lastName')} />
+            </div>
           </div>
           <FieldShell id="bio" label="Bio" error={err('bio')}>
             {(a11y) => (

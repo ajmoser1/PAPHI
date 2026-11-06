@@ -6,7 +6,6 @@ import { STATUS, isAdminRole } from '@/lib/constants'
 import { hasVisibleContact } from '@/lib/contact'
 import { ProfileForm } from '@/components/profile/ProfileForm'
 import { PositionsSection } from '@/components/profile/PositionsSection'
-import { AvatarUpload } from '@/components/profile/AvatarUpload'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StepIndicator } from '@/components/forms/StepIndicator'
 import { CompletenessBar, type CompletenessItem } from '@/components/forms/CompletenessBar'
@@ -91,11 +90,9 @@ export default async function ProfileEditPage({
 
       {!(completenessDismissed && items.every((i) => i.done)) && <CompletenessBar items={items} />}
 
-      <Section id="photo" title="Photo">
-        <AvatarUpload avatarUrl={profile.avatar_url} initials={initials} />
-      </Section>
-
       <ProfileForm
+        avatarUrl={profile.avatar_url}
+        initials={initials}
         profile={{
           first_name: profile.first_name ?? '',
           last_name: profile.last_name ?? '',
