@@ -37,6 +37,11 @@ The app looked "bland and sterile" and was really three apps (purple member app,
 - Settings: cards without separators, pending/success on every save, explanations under privacy options, switches for contact visibility, inline password change.
 - Landing: Register as the primary CTA, "How it works", stats strip, "Start a chapter" band, signed-in visitors go to `/members`. Start-chapter form keeps values on a failed submit.
 
+**Task-first admin page (2026-11-06)**
+- `/admin` opens on "To do": members waiting for approval (and chapter requests for the founder) with their buttons right there, "All clear" when empty, and the invite link. A brand-new chapter sees a three-step checklist (set colors, share invite link, approve the first brother) that disappears as each step completes. That replaces the idea of a guided tour.
+- Everything else is a tab: Members, Branding, Companies & fields, Chapters (founder). `?tab=` in the URL, so links and redirects from the old routes still land in the right place.
+- Section descriptions, stat tiles, the section bar, and most helper text are gone. Companies and career fields are hosted as-is pending a separate change.
+
 **Flat layout and autosave (2026-11-06)**
 - Settings is two flat sections (Who sees what, Account) with no cards; every control saves on change with an inline "Saving… / Saved" status. Password change stays an explicit form.
 - Admin dashboard and profile editing use flat sections with hairline dividers instead of nested cards; the overview is a stat row. The member list and the companies/fields catalog start collapsed with a "Show all" control.

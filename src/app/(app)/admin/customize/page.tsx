@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-/** Folded into the single admin dashboard. */
+/** Folded into the admin page. */
 export default function Redirect() {
-  redirect('/admin#branding')
+  redirect('/admin?tab=branding')
 }

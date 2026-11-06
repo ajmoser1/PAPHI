@@ -1,16 +1,13 @@
-import { Suspense } from 'react'
 import { requireChapterAdmin } from '@/lib/auth'
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { ROLES } from '@/lib/constants'
 import { ALUMNI_CONTACT_VISIBLE_SELECT, hasVisibleContact, type VisibleContactInput } from '@/lib/contact'
 import { inviteRegisterUrl, getSiteOrigin } from '@/lib/site'
 import { getUxPreviewModeForRole } from '@/lib/ux-preview'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
-import { AdminSectionBar, type AdminSection } from '@/components/admin/AdminSectionBar'
-import { StatRow } from '@/components/admin/StatRow'
-import { ExpandableBlock } from '@/components/admin/ExpandableBlock'
+import { AdminTabs, type AdminTab } from '@/components/admin/AdminTabs'
+import { SetupChecklist } from '@/components/admin/SetupChecklist'
 import { ApprovalList, type PendingMember } from '@/components/admin/ApprovalList'
 import { MembersTable, type ActiveMember } from '@/components/admin/MembersTable'
 import { InviteLinkCard } from '@/components/admin/InviteLinkCard'
@@ -34,42 +31,30 @@ type ProfileRow = {
   graduation_year: number | null
 }
 
-function SectionCard({
-  id,
-  title,
-  description,
-  children,
-}: {
-  id: string
-  title: string
-  description?: string
-  children: React.ReactNode
-}) {
-  return (
-    <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-32">
-      <div className="mb-4 border-b border-border pb-2">
-        <h2 id={`${id}-heading`} className="heading-3">
-          {title}
-        </h2>
-        {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
-      </div>
-      {children}
-    </section>
-  )
+const TAB_IDS = ['todo', 'members', 'branding', 'catalog', 'chapters'] as const
+type TabId = (typeof TAB_IDS)[number]
+
+function pickTab(value: string | string[] | undefined): TabId {
+  const v = Array.isArray(value) ? value[0] : value
+  return (TAB_IDS as readonly string[]).includes(v ?? '') ? (v as TabId) : 'todo'
 }
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   let ctx: Awaited<ReturnType<typeof requireChapterAdmin>>
   try {
     ctx = await requireChapterAdmin()
   } catch {
     return (
       <div className="space-y-6">
-        <PageHeader title="Admin dashboard" />
+        <PageHeader title="Admin" />
         <Empty className="py-14">
           <EmptyHeader>
             <EmptyTitle className="heading-3">No chapter assigned to your admin account</EmptyTitle>
-            <EmptyDescription>Ask the founder to assign you to a chapter from the Chapters section of their dashboard. Until then there is nothing to manage here.</EmptyDescription>
+            <EmptyDescription>Ask the founder to assign you to a chapter. Until then there is nothing to manage here.</EmptyDescription>
           </EmptyHeader>
         </Empty>
       </div>
@@ -79,9 +64,10 @@ export default async function AdminDashboardPage() {
   const isFounder = profile.role === ROLES.FOUNDER
   const chapterId = profile.chapter_id
   const chapterScoped = !isFounder && Boolean(chapterId)
+  const tab = pickTab((await searchParams).tab)
   const uxPreviewMode = await getUxPreviewModeForRole(profile.role)
 
-  // --- Members ---------------------------------------------------------------
+  // --- Members (always: counts feed the tab badges) --------------------------
   let pendingQuery = adminClient
     .from('profiles')
     .select('id, first_name, last_name, role, created_at, chapter_id, avatar_url, graduation_year')
@@ -97,33 +83,17 @@ export default async function AdminDashboardPage() {
     .order('created_at', { ascending: false })
   if (chapterScoped) activeQuery = activeQuery.eq('chapter_id', chapterId!)
 
-  const monthStart = new Date()
-  monthStart.setDate(1)
-  monthStart.setHours(0, 0, 0, 0)
-
-  const [{ data: pending }, { data: active }, { count: messagesThisMonth }, { data: companies }, { data: industries }, chapterRes] =
-    await Promise.all([
-      pendingQuery,
-      activeQuery,
-      isFounder
-        ? adminClient.from('messages').select('id', { count: 'exact', head: true }).gte('created_at', monthStart.toISOString())
-        : Promise.resolve({ count: null as number | null }),
-      adminClient.from('companies').select('id, name, status, website, industry_id, suggested_by, industries(name)').order('name'),
-      adminClient.from('industries').select('id, name, slug').order('name'),
-      chapterId
-        ? adminClient.from('chapters').select('id, display_title, tagline, school_name, primary_color, accent_color, invite_token').eq('id', chapterId).maybeSingle()
-        : Promise.resolve({ data: null }),
-    ])
-
+  const [{ data: pending }, { data: active }, chapterRes] = await Promise.all([
+    pendingQuery,
+    activeQuery,
+    chapterId
+      ? adminClient.from('chapters').select('id, display_title, tagline, school_name, primary_color, accent_color, invite_token').eq('id', chapterId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
   const pendingList = (pending ?? []) as ProfileRow[]
   const activeList = (active ?? []) as ProfileRow[]
   const chapter = chapterRes.data
-
-  const pendingIds = pendingList.map((p) => p.id)
-  const { data: contacts } = pendingIds.length
-    ? await adminClient.from('alumni_contact').select(`profile_id, ${ALUMNI_CONTACT_VISIBLE_SELECT}`).in('profile_id', pendingIds)
-    : { data: [] }
-  const contactByProfile = Object.fromEntries(((contacts ?? []) as (VisibleContactInput & { profile_id: string })[]).map((c) => [c.profile_id, c]))
+  const inviteUrl = chapter?.invite_token ? inviteRegisterUrl(chapter.invite_token, userId) : null
 
   const chapterIds = [...new Set([...pendingList, ...activeList].map((p) => p.chapter_id).filter((id): id is string => Boolean(id)))]
   const { data: chapterRows } = chapterIds.length
@@ -132,6 +102,94 @@ export default async function AdminDashboardPage() {
   const chapterLabelById = Object.fromEntries(
     ((chapterRows ?? []) as { id: string; name: string; school_name: string | null }[]).map((ch) => [ch.id, ch.school_name ? `${ch.name} — ${ch.school_name}` : ch.name])
   )
+
+  // --- Founder counts for the Chapters badge --------------------------------
+  let requests: ChapterRequest[] = []
+  if (isFounder) {
+    const { data: reqs } = await adminClient
+      .from('chapter_requests')
+      .select('id, chapter_name, school_name, contact_name, contact_email')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+    requests = (reqs ?? []) as ChapterRequest[]
+  }
+
+  const tabs: AdminTab[] = [
+    { id: 'todo', label: 'To do', count: pendingList.length + (isFounder ? requests.length : 0) },
+    { id: 'members', label: 'Members', count: activeList.length },
+    ...(chapter ? [{ id: 'branding', label: 'Branding' }] : []),
+    { id: 'catalog', label: 'Companies & fields' },
+    ...(isFounder ? [{ id: 'chapters', label: 'Chapters' }] : []),
+  ]
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Admin" actions={isFounder ? <UxPreviewMenu currentMode={uxPreviewMode} /> : undefined} />
+      <AdminTabs tabs={tabs} active={tab} />
+
+      {tab === 'todo' && (
+        <TodoTab
+          adminClient={adminClient}
+          pendingList={pendingList}
+          activeCount={activeList.length}
+          chapterLabelById={chapterLabelById}
+          inviteUrl={inviteUrl}
+          hasColors={Boolean(chapter?.primary_color)}
+          isNewChapter={Boolean(chapter) && activeList.length === 0}
+          requests={isFounder ? requests : null}
+        />
+      )}
+
+      {tab === 'members' && (
+        <MembersTable
+          members={activeList.map((p) => ({
+            id: p.id,
+            first_name: p.first_name,
+            last_name: p.last_name,
+            role: p.role,
+            created_at: p.created_at,
+            avatar_url: p.avatar_url,
+            graduation_year: p.graduation_year,
+            chapterLabel: p.chapter_id ? (chapterLabelById[p.chapter_id] ?? null) : null,
+          }))}
+        />
+      )}
+
+      {tab === 'branding' && chapter && <BrandingForm chapter={chapter} />}
+
+      {tab === 'catalog' && <CatalogTab adminClient={adminClient} isFounder={isFounder} />}
+
+      {tab === 'chapters' && isFounder && <ChaptersTab adminClient={adminClient} userId={userId} requests={requests} />}
+    </div>
+  )
+}
+
+type AdminClient = Awaited<ReturnType<typeof requireChapterAdmin>>['adminClient']
+
+async function TodoTab({
+  adminClient,
+  pendingList,
+  activeCount,
+  chapterLabelById,
+  inviteUrl,
+  hasColors,
+  isNewChapter,
+  requests,
+}: {
+  adminClient: AdminClient
+  pendingList: ProfileRow[]
+  activeCount: number
+  chapterLabelById: Record<string, string>
+  inviteUrl: string | null
+  hasColors: boolean
+  isNewChapter: boolean
+  requests: ChapterRequest[] | null
+}) {
+  const pendingIds = pendingList.map((p) => p.id)
+  const { data: contacts } = pendingIds.length
+    ? await adminClient.from('alumni_contact').select(`profile_id, ${ALUMNI_CONTACT_VISIBLE_SELECT}`).in('profile_id', pendingIds)
+    : { data: [] }
+  const contactByProfile = Object.fromEntries(((contacts ?? []) as (VisibleContactInput & { profile_id: string })[]).map((c) => [c.profile_id, c]))
 
   const pendingMembers: PendingMember[] = pendingList.map((p) => {
     const c = contactByProfile[p.id]
@@ -149,22 +207,64 @@ export default async function AdminDashboardPage() {
       linkedin: c?.linkedin_url?.trim() || null,
     }
   })
-  const activeMembers: ActiveMember[] = activeList.map((p) => ({
-    id: p.id,
-    first_name: p.first_name,
-    last_name: p.last_name,
-    role: p.role,
-    created_at: p.created_at,
-    avatar_url: p.avatar_url,
-    graduation_year: p.graduation_year,
-    chapterLabel: p.chapter_id ? (chapterLabelById[p.chapter_id] ?? null) : null,
-  }))
-  const withoutPhoto = activeList.filter((p) => !p.avatar_url).length
 
-  // --- Companies / fields ----------------------------------------------------
+  const nothingToDo = pendingMembers.length === 0 && !(requests && requests.length)
+
+  return (
+    <div className="space-y-8">
+      {isNewChapter && (
+        <SetupChecklist
+          steps={[
+            { id: 'colors', label: 'Set your chapter colors', done: hasColors, href: '/admin?tab=branding' },
+            { id: 'invite', label: 'Share your invite link', done: pendingList.length > 0 || activeCount > 0 },
+            { id: 'approve', label: 'Approve your first brother', done: activeCount > 0 },
+          ]}
+        />
+      )}
+
+      {requests && requests.length > 0 && (
+        <section aria-labelledby="requests-heading">
+          <h2 id="requests-heading" className="heading-4 mb-3">
+            {requests.length} chapter {requests.length === 1 ? 'request' : 'requests'}
+          </h2>
+          <ChapterRequestsList requests={requests} />
+        </section>
+      )}
+
+      {pendingMembers.length > 0 && (
+        <section aria-labelledby="approvals-heading">
+          <h2 id="approvals-heading" className="heading-4 mb-3">
+            {pendingMembers.length} waiting for approval
+          </h2>
+          <ApprovalList members={pendingMembers} />
+        </section>
+      )}
+
+      {nothingToDo && (
+        <Empty className="py-10">
+          <EmptyHeader>
+            <EmptyTitle className="heading-3">All clear</EmptyTitle>
+            <EmptyDescription>New registrations show up here for approval.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
+
+      {inviteUrl && (
+        <div className="border-t border-border">
+          <InviteLinkCard inviteUrl={inviteUrl} emptyPending={pendingMembers.length === 0} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+async function CatalogTab({ adminClient, isFounder }: { adminClient: AdminClient; isFounder: boolean }) {
+  const [{ data: companies }, { data: industries }] = await Promise.all([
+    adminClient.from('companies').select('id, name, status, website, industry_id, suggested_by, industries(name)').order('name'),
+    adminClient.from('industries').select('id, name, slug').order('name'),
+  ])
   const companyList = (companies ?? []) as unknown as AdminCompany[]
   const industryRows = (industries ?? []) as { id: string; name: string; slug: string }[]
-  const missingField = companyList.filter((c) => !c.industry_id && c.status !== 'rejected').length
   const usage = new Map<string, { companyCount: number; positionCount: number }>()
   if (industryRows.length) {
     const ids = industryRows.map((i) => i.id)
@@ -177,143 +277,54 @@ export default async function AdminDashboardPage() {
     for (const row of positionRows ?? []) if (row.industry_id) usage.get(row.industry_id)!.positionCount += 1
   }
   const industryList: AdminIndustry[] = industryRows.map((i) => ({ ...i, ...(usage.get(i.id) ?? { companyCount: 0, positionCount: 0 }) }))
-
-  // --- Founder ---------------------------------------------------------------
-  let requests: ChapterRequest[] = []
-  let chapters: ChapterRow[] = []
-  if (isFounder) {
-    const host = new URL(getSiteOrigin()).host
-    const [{ data: reqs }, { data: chs }] = await Promise.all([
-      adminClient.from('chapter_requests').select('id, chapter_name, school_name, contact_name, contact_email').eq('status', 'pending').order('created_at', { ascending: true }),
-      adminClient.from('chapters').select('id, slug, name, school_name, status, invite_token, contact_email').order('name'),
-    ])
-    requests = (reqs ?? []) as ChapterRequest[]
-    chapters = ((chs ?? []) as Array<Omit<ChapterRow, 'inviteUrl' | 'host'> & { invite_token: string }>).map((ch) => ({
-      id: ch.id,
-      slug: ch.slug,
-      name: ch.name,
-      school_name: ch.school_name,
-      status: ch.status,
-      contact_email: ch.contact_email,
-      inviteUrl: inviteRegisterUrl(ch.invite_token, userId),
-      host,
-    }))
-  }
-
-  const inviteUrl = chapter?.invite_token ? inviteRegisterUrl(chapter.invite_token, userId) : null
-
-  const sections: AdminSection[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'approvals', label: 'Approvals', count: pendingMembers.length },
-    { id: 'members', label: 'Members' },
-    ...(chapter ? [{ id: 'branding', label: 'Branding' }] : []),
-    { id: 'catalog', label: 'Companies & fields' },
-    ...(isFounder ? [{ id: 'chapters', label: 'Chapters', count: requests.length }] : []),
-  ]
+  const missingField = companyList.filter((c) => !c.industry_id && c.status !== 'rejected').length
 
   return (
-    <div className="space-y-10">
-      <PageHeader
-        title="Admin dashboard"
-        description={
-          chapter?.display_title
-            ? `Everything for ${chapter.display_title}: approvals, members, branding, and the company list.`
-            : 'Approvals, members, branding, and the company list in one place.'
-        }
-        actions={isFounder ? <UxPreviewMenu currentMode={uxPreviewMode} /> : undefined}
-      />
+    <Tabs defaultValue="companies">
+      <TabsList>
+        <TabsTrigger value="companies">
+          Companies
+          {missingField > 0 && <span className="ml-1 rounded-full bg-warning-soft px-1.5 text-xs text-warning-soft-foreground">{missingField}</span>}
+        </TabsTrigger>
+        <TabsTrigger value="fields">Career fields</TabsTrigger>
+      </TabsList>
+      <TabsContent value="companies" className="space-y-5 pt-3">
+        <CreateCompanyForm industries={industryRows} />
+        <CompanyAdminList companies={companyList} industries={industryRows} isFounder={isFounder} />
+      </TabsContent>
+      <TabsContent value="fields" className="space-y-5 pt-3">
+        {isFounder && <CreateIndustryForm />}
+        <IndustryAdminList industries={industryList} isFounder={isFounder} />
+      </TabsContent>
+    </Tabs>
+  )
+}
 
-      <AdminSectionBar sections={sections} />
+async function ChaptersTab({ adminClient, userId, requests }: { adminClient: AdminClient; userId: string; requests: ChapterRequest[] }) {
+  const host = new URL(getSiteOrigin()).host
+  const { data: chs } = await adminClient.from('chapters').select('id, slug, name, school_name, status, invite_token, contact_email').order('name')
+  const chapters: ChapterRow[] = ((chs ?? []) as Array<Omit<ChapterRow, 'inviteUrl' | 'host'> & { invite_token: string }>).map((ch) => ({
+    id: ch.id,
+    slug: ch.slug,
+    name: ch.name,
+    school_name: ch.school_name,
+    status: ch.status,
+    contact_email: ch.contact_email,
+    inviteUrl: inviteRegisterUrl(ch.invite_token, userId),
+    host,
+  }))
 
-      <StatRow
-        id="overview"
-        stats={[
-          { label: 'Pending approval', value: pendingMembers.length, href: '#approvals', tone: pendingMembers.length ? 'warning' : 'neutral' },
-          { label: 'Active members', value: activeMembers.length, href: '#members', tone: 'brand' },
-          { label: 'Without a photo', value: withoutPhoto, href: '#members', tone: withoutPhoto ? 'warning' : 'neutral' },
-          isFounder
-            ? { label: 'Messages this month', value: messagesThisMonth ?? 0, href: '#members', tone: 'neutral' }
-            : { label: 'Companies missing a field', value: missingField, href: '#catalog', tone: missingField ? 'warning' : 'neutral' },
-        ]}
-      />
-
-      <SectionCard
-        id="approvals"
-        title={pendingMembers.length ? `${pendingMembers.length} waiting for approval` : 'Nobody waiting for approval'}
-        description="Check the phone number and name match a real brother before approving. Members need a visible contact method first."
-      >
-        {pendingMembers.length ? (
-          <ApprovalList members={pendingMembers} />
-        ) : (
-          <div className="divide-y divide-border">
-            <p className="py-3 text-sm text-muted-foreground">New registrations show up here. Share your invite link to bring brothers in.</p>
-            {inviteUrl && <InviteLinkCard inviteUrl={inviteUrl} emptyPending />}
-          </div>
-        )}
-        {pendingMembers.length > 0 && inviteUrl && (
-          <div className="mt-4 border-t border-border">
-            <InviteLinkCard inviteUrl={inviteUrl} />
-          </div>
-        )}
-      </SectionCard>
-
-      <SectionCard id="members" title={`${activeMembers.length} active ${activeMembers.length === 1 ? 'member' : 'members'}`} description="Everyone approved in your chapter. Removing a member suspends their account.">
-        {activeMembers.length ? (
-          <ExpandableBlock label={`Show all ${activeMembers.length}`} collapsedHint="Search, review, or remove members.">
-            <MembersTable members={activeMembers} />
-          </ExpandableBlock>
-        ) : (
-          <p className="text-sm text-muted-foreground">No active members yet.</p>
-        )}
-      </SectionCard>
-
-      {chapter && (
-        <SectionCard id="branding" title="Branding" description="Your chapter's name, tagline, and colors. Changes apply to every member's view.">
-          <BrandingForm chapter={chapter} />
-        </SectionCard>
+  return (
+    <div className="space-y-8">
+      {requests.length > 0 && (
+        <section aria-labelledby="chapter-requests-heading">
+          <h2 id="chapter-requests-heading" className="heading-4 mb-3">
+            {requests.length} chapter {requests.length === 1 ? 'request' : 'requests'}
+          </h2>
+          <ChapterRequestsList requests={requests} />
+        </section>
       )}
-
-      <SectionCard id="catalog" title="Companies and career fields" description="Keep the lists members pick from clean, so Find a Brother filters stay useful.">
-        <ExpandableBlock
-          label={`Show ${companyList.length} companies and ${industryList.length} fields`}
-          collapsedHint={missingField ? `${missingField} ${missingField === 1 ? 'company is' : 'companies are'} missing a career field.` : 'Everything has a career field.'}
-        >
-        <Tabs defaultValue="companies">
-          <TabsList>
-            <TabsTrigger value="companies">
-              Companies
-              {missingField > 0 && <span className="ml-1 rounded-full bg-warning-soft px-1.5 text-xs text-warning-soft-foreground">{missingField}</span>}
-            </TabsTrigger>
-            <TabsTrigger value="fields">Career fields</TabsTrigger>
-          </TabsList>
-          <TabsContent value="companies" className="space-y-5 pt-3">
-            <CreateCompanyForm industries={industryRows} />
-            <Suspense fallback={<Skeleton className="h-40" />}>
-              <CompanyAdminList companies={companyList} industries={industryRows} isFounder={isFounder} />
-            </Suspense>
-          </TabsContent>
-          <TabsContent value="fields" className="space-y-5 pt-3">
-            {isFounder && <CreateIndustryForm />}
-            <IndustryAdminList industries={industryList} isFounder={isFounder} />
-          </TabsContent>
-        </Tabs>
-        </ExpandableBlock>
-      </SectionCard>
-
-      {isFounder && (
-        <SectionCard id="chapters" title="Chapters" description="Approve chapter requests, copy invite links, and assign chapter admins.">
-          <div className="space-y-8">
-            <div>
-              <h3 className="heading-4 mb-3">{requests.length ? `${requests.length} chapter ${requests.length === 1 ? 'request' : 'requests'}` : 'No chapter requests'}</h3>
-              {requests.length ? <ChapterRequestsList requests={requests} /> : <p className="text-sm text-muted-foreground">Requests from the Start a chapter page appear here.</p>}
-            </div>
-            <div>
-              <h3 className="heading-4 mb-3">All chapters</h3>
-              <ChaptersList chapters={chapters} />
-            </div>
-          </div>
-        </SectionCard>
-      )}
+      <ChaptersList chapters={chapters} />
     </div>
   )
 }

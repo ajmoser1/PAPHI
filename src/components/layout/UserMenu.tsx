@@ -61,7 +61,7 @@ export function UserMenu({ user }: { user: UserMenuUser }) {
           </DropdownMenuItem>
           {isAdminRole(user.role) && (
             <DropdownMenuItem render={<Link href="/admin" />} className="min-h-9 px-2">
-              <Shield /> Admin dashboard
+              <Shield /> Admin
             </DropdownMenuItem>
           )}
         </DropdownMenuGroup>

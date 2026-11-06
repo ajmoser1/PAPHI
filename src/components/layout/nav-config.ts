@@ -35,7 +35,7 @@ export function buildNav(opts: { role: string; status: string; showFounderLink?:
     groups.push({
       id: 'admin',
       label: 'Administration',
-      items: [{ href: '/admin', label: 'Admin dashboard', icon: Shield }],
+      items: [{ href: '/admin', label: 'Admin', icon: Shield }],
     })
   }
 

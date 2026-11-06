@@ -25,11 +25,7 @@ export function InviteLinkCard({ inviteUrl, emptyPending = false }: { inviteUrl:
           <Link2 className="size-4 text-muted-foreground" aria-hidden="true" />
           Invite link
         </p>
-        <p className="text-xs text-muted-foreground">
-          {emptyPending
-            ? 'Share it to get your first members. They register with a phone number, then appear here for approval.'
-            : 'Brothers register with it and appear above for approval.'}
-        </p>
+        <p className="text-xs text-muted-foreground">Brothers register with this link and show up here for approval.</p>
         <code className="mt-1 block truncate text-xs text-muted-foreground">{inviteUrl}</code>
       </div>
       <Button type="button" variant="outline" size="sm" onClick={copyLink} className="shrink-0">

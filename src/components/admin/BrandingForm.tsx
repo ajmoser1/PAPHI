@@ -74,7 +74,7 @@ export function BrandingForm({ chapter }: { chapter: Chapter }) {
     >
       <div className="space-y-4">
         <input type="hidden" name="chapterId" value={chapter.id} />
-        <FormField id="displayTitle" name="displayTitle" label="Display title" value={title} onChange={(e) => setTitle(e.target.value)} required hint="Shown in the sidebar and on your chapter's landing page." />
+        <FormField id="displayTitle" name="displayTitle" label="Display title" value={title} onChange={(e) => setTitle(e.target.value)} required />
         <div className="space-y-1.5">
           <Label htmlFor="tagline">Tagline</Label>
           <Textarea id="tagline" name="tagline" defaultValue={chapter.tagline ?? ''} rows={2} placeholder="Find brothers for referrals, mentorship, and opportunities." />
@@ -112,9 +112,6 @@ export function BrandingForm({ chapter }: { chapter: Chapter }) {
             <ContrastBadge label="Label text" ratio={accentText} />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Buttons, headings, and the sidebar use the primary color. The accent marks alumni and the active menu item. Aim for 4.5:1 or better.
-        </p>
         <Button type="submit" disabled={isPending}>
           {isPending ? 'Saving…' : 'Save branding'}
         </Button>
