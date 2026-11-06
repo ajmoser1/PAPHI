@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Briefcase, Pencil, Plus, Star, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Star, Trash2 } from 'lucide-react'
 import { createPosition, deletePosition, setFeaturedPosition, updatePosition } from '@/actions/profile'
 import {
   AlertDialog,
@@ -119,7 +119,6 @@ function PositionForm({
               <option key={c.id} value={c.name} />
             ))}
           </datalist>
-          <p className="text-xs text-muted-foreground">Start typing to pick an existing company, or enter a new one.</p>
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor={`${formKey}-title`}>Title</Label>
@@ -141,7 +140,6 @@ function PositionForm({
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted-foreground">How brothers filter the directory.</p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${formKey}-startYear`}>Start year</Label>
@@ -315,12 +313,6 @@ export function PositionsSection({ positions, companies, industries, featuredPos
               <Plus className="size-4" aria-hidden="true" />
               {positions.length === 0 ? 'Add your current job' : 'Add another job'}
             </button>
-            {positions.length === 0 && (
-              <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                <Briefcase className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                Brothers search by company and career field. Without a job you only show up by name.
-              </p>
-            )}
             {!essentialsOnly && <LinkedInImport industries={industries} />}
           </div>
         )

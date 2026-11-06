@@ -42,9 +42,7 @@ export function AvatarUpload({ avatarUrl, initials = '?' }: Props) {
             </Button>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          A clear photo of your face. JPG, PNG, or WebP, up to 5MB. Required so brothers can recognize you.
-        </p>
+        <p className="text-xs text-muted-foreground">JPG, PNG, or WebP, up to 5MB.</p>
       </div>
     </div>
   )

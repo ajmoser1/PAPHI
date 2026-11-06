@@ -58,10 +58,10 @@ export default async function ProfileEditPage({
   const initials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase() || '?'
 
   const items: CompletenessItem[] = [
-    { id: 'photo', label: 'Add a photo', done: Boolean(profile.avatar_url), href: '#photo', why: 'Required. Brothers recognize faces.' },
-    { id: 'job', label: 'Add your current job', done: (positions?.length ?? 0) > 0, href: '#experience', why: 'Brothers search by company and field.' },
-    { id: 'contact', label: 'Show a way to reach you', done: hasVisibleContact(contact), href: '#contact', why: 'So a brother can follow up after a message.' },
-    { id: 'bio', label: 'Write a short bio', done: Boolean(profile.bio?.trim()), href: '#basics', why: 'One line about what you do and how you can help.' },
+    { id: 'photo', label: 'Add a photo', done: Boolean(profile.avatar_url), href: '#photo' },
+    { id: 'job', label: 'Add your current job', done: (positions?.length ?? 0) > 0, href: '#experience' },
+    { id: 'contact', label: 'Show a way to reach you', done: hasVisibleContact(contact), href: '#contact' },
+    { id: 'bio', label: 'Write a short bio', done: Boolean(profile.bio?.trim()), href: '#basics' },
   ]
 
   return (
@@ -75,15 +75,7 @@ export default async function ProfileEditPage({
               ? 'Make yourself findable'
               : 'Edit profile'
         }
-        description={
-          forceContact
-            ? 'Brothers need at least one way to reach you. Tick "Visible to members" on your phone, email, or LinkedIn.'
-            : isPending
-              ? 'A photo and your current job help your chapter admin recognize you and approve you faster.'
-              : setupMode
-                ? 'This is what brothers see when they find you. Photo, job, and a way to reach you are the essentials.'
-                : 'This is what brothers see when they find you.'
-        }
+        description={forceContact ? 'Switch on at least one way for brothers to reach you.' : undefined}
         actions={
           !isPending ? (
             <Link href={`/members/${user.id}`} className={buttonVariants({ variant: 'outline' })}>
@@ -99,7 +91,7 @@ export default async function ProfileEditPage({
 
       {!(completenessDismissed && items.every((i) => i.done)) && <CompletenessBar items={items} />}
 
-      <Section id="photo" title="Photo" description="Every member has one. It is the first thing a brother sees.">
+      <Section id="photo" title="Photo">
         <AvatarUpload avatarUrl={profile.avatar_url} initials={initials} />
       </Section>
 
@@ -126,15 +118,7 @@ export default async function ProfileEditPage({
         contactRequired={!isAdminRole(profile.role)}
       />
 
-      <Section
-        id="experience"
-        title="Experience"
-        description={
-          positions && positions.length > 1
-            ? 'Each job saves on its own. The featured one shows on your card in search.'
-            : 'Each job saves on its own. Add your current role first.'
-        }
-      >
+      <Section id="experience" title="Experience">
           <PositionsSection
             positions={positions ?? []}
             companies={companies ?? []}
@@ -145,19 +129,15 @@ export default async function ProfileEditPage({
       </Section>
 
       <p className="text-sm text-muted-foreground">
-        Who can find you in search and who sees your bio live in{' '}
         <Link href="/settings" className="font-medium text-primary underline-offset-4 hover:underline">
-          Settings
+          Privacy settings
         </Link>
-        .
         {isPending && (
           <>
-            {' '}
-            Done for now?{' '}
+            {' · '}
             <Link href="/members" className="font-medium text-primary underline-offset-4 hover:underline">
-              Go to Find a Brother
+              Find a Brother
             </Link>
-            .
           </>
         )}
       </p>

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 
 const STORAGE_KEY = 'profile-completeness-dismissed'
 
-export type CompletenessItem = { id: string; label: string; done: boolean; href: string; why: string }
+export type CompletenessItem = { id: string; label: string; done: boolean; href: string; why?: string }
 
 export function completeness(items: CompletenessItem[]): number {
   if (!items.length) return 0
@@ -83,9 +83,7 @@ export function CompletenessBar({ items, className }: { items: CompletenessItem[
       </div>
       <Progress value={pct} className="mt-2" aria-label={`Profile ${pct}% complete`} />
       {complete ? (
-        <p className="mt-2 text-xs text-success-soft-foreground/90">
-          Brothers can find you by company and field and reach you directly. Close this card whenever you like.
-        </p>
+        <p className="mt-2 text-xs text-success-soft-foreground/90">Brothers can find you and reach you.</p>
       ) : (
         <ul className="mt-3 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
           {items.map((item) => (

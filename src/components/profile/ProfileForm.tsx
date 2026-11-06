@@ -93,13 +93,13 @@ export function ProfileForm({ profile, contact, chapterLabel, contactRequired = 
     >
       <FormAlert message={state?.message} errors={state?.errors} fieldLabels={FIELD_LABELS} />
 
-      <Section id="basics" title="About you" description="Your name and class year show on every card in Find a Brother.">
+      <Section id="basics" title="About you">
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="firstName" name="firstName" label="First name" defaultValue={profile.first_name} required autoComplete="given-name" error={err('firstName')} />
             <FormField id="lastName" name="lastName" label="Last name" defaultValue={profile.last_name} required autoComplete="family-name" error={err('lastName')} />
           </div>
-          <FieldShell id="bio" label="Bio" hint="A sentence or two: what you do, what you're into, how you can help." error={err('bio')}>
+          <FieldShell id="bio" label="Bio" error={err('bio')}>
             {(a11y) => (
               <Textarea id="bio" name="bio" defaultValue={profile.bio ?? ''} rows={3} placeholder="Product manager in fintech, happy to chat about breaking into PM…" {...a11y} />
             )}
@@ -126,21 +126,12 @@ export function ProfileForm({ profile, contact, chapterLabel, contactRequired = 
               >
                 {chapterLabel ?? 'No chapter assigned'}
               </p>
-              <p className="text-xs text-muted-foreground">Set by your chapter admin.</p>
             </div>
           </div>
         </div>
       </Section>
 
-      <Section
-        id="contact"
-        title="How brothers reach you"
-        description={
-          contactRequired
-            ? 'Your chapter admin always sees your phone to verify you. Tick what other members can see. At least one must be visible.'
-            : 'Optional for admins. Tick what other members can see.'
-        }
-      >
+      <Section id="contact" title="Contact">
         <div className="space-y-4">
           <ContactField
             id="phone"
