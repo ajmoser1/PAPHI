@@ -59,9 +59,9 @@ export function ChaptersList({ chapters }: { chapters: ChapterRow[] }) {
   const [, startTransition] = useTransition()
 
   return (
-    <ul className="space-y-3">
+    <ul className="divide-y divide-border">
       {chapters.map((ch) => (
-        <li key={ch.id} className={cn('space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10', ch.status !== 'active' && 'opacity-75')}>
+        <li key={ch.id} className={cn('space-y-3 py-4 first:pt-0 last:pb-0', ch.status !== 'active' && 'opacity-75')}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -84,8 +84,8 @@ export function ChaptersList({ chapters }: { chapters: ChapterRow[] }) {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 p-2">
-            <code className="min-w-0 flex-1 truncate text-xs">{ch.inviteUrl}</code>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{ch.inviteUrl}</code>
             <CopyButton value={ch.inviteUrl} label="Copy invite link" />
           </div>
 

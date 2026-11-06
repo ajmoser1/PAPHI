@@ -37,6 +37,10 @@ The app looked "bland and sterile" and was really three apps (purple member app,
 - Settings: cards without separators, pending/success on every save, explanations under privacy options, switches for contact visibility, inline password change.
 - Landing: Register as the primary CTA, "How it works", stats strip, "Start a chapter" band, signed-in visitors go to `/members`. Start-chapter form keeps values on a failed submit.
 
+**Flat layout and autosave (2026-11-06)**
+- Settings is two flat sections (Who sees what, Account) with no cards; every control saves on change with an inline "Saving… / Saved" status. Password change stays an explicit form.
+- Admin dashboard and profile editing use flat sections with hairline dividers instead of nested cards; the overview is a stat row. The member list and the companies/fields catalog start collapsed with a "Show all" control.
+
 **Audit fixes (2026-10-13)** after a three-pass bug review of the overhaul:
 - Google photo import only fetches `https://*.googleusercontent.com` for Google sign-ins, with no redirects, a streamed 5MB cap, and a magic-byte check (user metadata is client-writable, so the URL was an SSRF surface).
 - Forms submitted through `useActionState` no longer lose the member's edits when validation fails (React 19 resets the form after any form action); the profile and privacy forms submit through a transition instead.

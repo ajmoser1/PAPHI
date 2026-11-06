@@ -1,17 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export function InviteLinkCard({
-  inviteUrl,
-  emptyPending = false,
-}: {
-  inviteUrl: string
-  emptyPending?: boolean
-}) {
+/** Inline invite link with a copy button. Flat: no box. */
+export function InviteLinkCard({ inviteUrl, emptyPending = false }: { inviteUrl: string; emptyPending?: boolean }) {
   const [copied, setCopied] = useState(false)
 
   async function copyLink() {
@@ -25,31 +19,23 @@ export function InviteLinkCard({
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Invite brothers</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-foreground">
-          {emptyPending
-            ? 'Share this link to get your first members. They register with a phone number, then appear here for approval.'
-            : 'Share this link so brothers can register. They join with a phone number, then appear below for approval.'}
+    <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:gap-4">
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          <Link2 className="size-4 text-muted-foreground" aria-hidden="true" />
+          Invite link
         </p>
-        <code className="text-xs bg-muted p-2 rounded block break-all">{inviteUrl}</code>
-        <Button type="button" variant="outline" size="sm" onClick={copyLink}>
-          {copied ? (
-            <>
-              <Check className="h-4 w-4" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="h-4 w-4" />
-              Copy link
-            </>
-          )}
-        </Button>
-      </CardContent>
-    </Card>
+        <p className="text-xs text-muted-foreground">
+          {emptyPending
+            ? 'Share it to get your first members. They register with a phone number, then appear here for approval.'
+            : 'Brothers register with it and appear above for approval.'}
+        </p>
+        <code className="mt-1 block truncate text-xs text-muted-foreground">{inviteUrl}</code>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={copyLink} className="shrink-0">
+        {copied ? <Check data-icon="inline-start" aria-hidden="true" /> : <Copy data-icon="inline-start" aria-hidden="true" />}
+        {copied ? 'Copied' : 'Copy link'}
+      </Button>
+    </div>
   )
 }

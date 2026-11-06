@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { saveProfile, type SaveProfileState } from '@/actions/profile'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Section } from '@/components/layout/Section'
 import { Textarea } from '@/components/ui/textarea'
 import { FormAlert, FormField, FieldShell } from '@/components/ui/form-field'
 import { StickySaveBar } from '@/components/forms/StickySaveBar'
@@ -89,18 +89,12 @@ export function ProfileForm({ profile, contact, chapterLabel, contactRequired = 
         startTransition(() => action(fd))
       }}
       onChange={() => setDirty(snapshot(formRef.current) !== initial)}
-      className="space-y-6"
+      className="space-y-10"
     >
       <FormAlert message={state?.message} errors={state?.errors} fieldLabels={FIELD_LABELS} />
 
-      <Card id="basics">
-        <CardHeader>
-          <CardTitle as="h2" className="heading-4">
-            About you
-          </CardTitle>
-          <CardDescription>Your name and class year show on every card in Find a Brother.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Section id="basics" title="About you" description="Your name and class year show on every card in Find a Brother.">
+        <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="firstName" name="firstName" label="First name" defaultValue={profile.first_name} required autoComplete="given-name" error={err('firstName')} />
             <FormField id="lastName" name="lastName" label="Last name" defaultValue={profile.last_name} required autoComplete="family-name" error={err('lastName')} />
@@ -135,21 +129,19 @@ export function ProfileForm({ profile, contact, chapterLabel, contactRequired = 
               <p className="text-xs text-muted-foreground">Set by your chapter admin.</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      <Card id="contact">
-        <CardHeader>
-          <CardTitle as="h2" className="heading-4">
-            How brothers reach you
-          </CardTitle>
-          <CardDescription>
-            {contactRequired
-              ? 'Your chapter admin always sees your phone to verify you. Tick what other members can see. At least one must be visible.'
-              : 'Optional for admins. Tick what other members can see.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Section
+        id="contact"
+        title="How brothers reach you"
+        description={
+          contactRequired
+            ? 'Your chapter admin always sees your phone to verify you. Tick what other members can see. At least one must be visible.'
+            : 'Optional for admins. Tick what other members can see.'
+        }
+      >
+        <div className="space-y-4">
           <ContactField
             id="phone"
             name="phone"
@@ -191,8 +183,8 @@ export function ProfileForm({ profile, contact, chapterLabel, contactRequired = 
             toggleDefault={contact?.show_linkedin ?? false}
           />
           {err('showPhone') && <p className="text-xs font-medium text-destructive">{err('showPhone')}</p>}
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
       <StickySaveBar
         visible={dirty || Boolean(state?.message) || Object.keys(errors).length > 0}

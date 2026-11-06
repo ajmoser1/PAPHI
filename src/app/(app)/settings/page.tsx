@@ -1,12 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getOwnProfileRow } from '@/lib/profile'
-import { PrivacySettingsForm } from '@/components/profile/PrivacySettingsForm'
-import { ContactVisibilityForm } from '@/components/settings/ContactVisibilityForm'
-import { SearchScopeSettingsForm } from '@/components/settings/SearchScopeSettingsForm'
-import { AccountSettingsCard } from '@/components/settings/AccountSettingsCard'
-import { FeedbackCard } from '@/components/settings/FeedbackCard'
+import { getFeedbackEmail, getFeedbackMailtoUrl } from '@/lib/feedback'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { VisibilitySettings } from '@/components/settings/VisibilitySettings'
+import { AccountSettings } from '@/components/settings/AccountSettings'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -21,21 +19,16 @@ export default async function SettingsPage() {
   ])
 
   if (!profile) redirect('/auth/pending')
+  const privacy = profile.privacy_settings ?? {}
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader
-        title="Settings"
-        description="Who can find you, what they see, and your sign-in details."
-      />
+    <div className="mx-auto max-w-3xl space-y-10">
+      <PageHeader title="Settings" description="Who can find you, what they see, and your sign-in details. Everything here saves automatically." />
 
-      <PrivacySettingsForm
+      <VisibilitySettings
         visibilityScope={profile.visibility_scope ?? 'fraternity'}
-        privacySettings={profile.privacy_settings ?? {}}
-      />
-
-
-      <ContactVisibilityForm
+        showContactTo={privacy.show_contact_to ?? 'fraternity'}
+        showBioTo={privacy.show_bio_to ?? 'fraternity'}
         contact={
           contact
             ? {
@@ -50,14 +43,12 @@ export default async function SettingsPage() {
         }
       />
 
-
-      <SearchScopeSettingsForm currentScope={profile.search_scope ?? 'fraternity'} />
-
-
-      <AccountSettingsCard email={user.email ?? null} />
-
-
-      <FeedbackCard />
+      <AccountSettings
+        email={user.email ?? null}
+        searchScope={profile.search_scope ?? 'fraternity'}
+        feedbackEmail={getFeedbackEmail()}
+        feedbackMailto={getFeedbackMailtoUrl()}
+      />
     </div>
   )
 }

@@ -10,7 +10,7 @@ import { AvatarUpload } from '@/components/profile/AvatarUpload'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StepIndicator } from '@/components/forms/StepIndicator'
 import { CompletenessBar, type CompletenessItem } from '@/components/forms/CompletenessBar'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Section } from '@/components/layout/Section'
 import { buttonVariants } from '@/components/ui/button'
 
 export default async function ProfileEditPage({
@@ -65,7 +65,7 @@ export default async function ProfileEditPage({
   ]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-10">
       <PageHeader
         eyebrow={setupMode ? undefined : 'My profile'}
         title={
@@ -99,17 +99,9 @@ export default async function ProfileEditPage({
 
       {!(completenessDismissed && items.every((i) => i.done)) && <CompletenessBar items={items} />}
 
-      <Card id="photo">
-        <CardHeader>
-          <CardTitle as="h2" className="heading-4">
-            Photo
-          </CardTitle>
-          <CardDescription>Every member has one. It is the first thing a brother sees.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AvatarUpload avatarUrl={profile.avatar_url} initials={initials} />
-        </CardContent>
-      </Card>
+      <Section id="photo" title="Photo" description="Every member has one. It is the first thing a brother sees.">
+        <AvatarUpload avatarUrl={profile.avatar_url} initials={initials} />
+      </Section>
 
       <ProfileForm
         profile={{
@@ -134,18 +126,15 @@ export default async function ProfileEditPage({
         contactRequired={!isAdminRole(profile.role)}
       />
 
-      <Card id="experience">
-        <CardHeader>
-          <CardTitle as="h2" className="heading-4">
-            Experience
-          </CardTitle>
-          <CardDescription>
-            {positions && positions.length > 1
-              ? 'Each job saves on its own. The featured one shows on your card in search.'
-              : 'Each job saves on its own. Add your current role first.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Section
+        id="experience"
+        title="Experience"
+        description={
+          positions && positions.length > 1
+            ? 'Each job saves on its own. The featured one shows on your card in search.'
+            : 'Each job saves on its own. Add your current role first.'
+        }
+      >
           <PositionsSection
             positions={positions ?? []}
             companies={companies ?? []}
@@ -153,8 +142,7 @@ export default async function ProfileEditPage({
             featuredPositionId={profile.featured_position_id}
             essentialsOnly={isPending}
           />
-        </CardContent>
-      </Card>
+      </Section>
 
       <p className="text-sm text-muted-foreground">
         Who can find you in search and who sees your bio live in{' '}

@@ -100,7 +100,7 @@ function PositionForm({
   }
 
   return (
-    <form key={formKey} onSubmit={handleSubmit} className="space-y-4 rounded-xl bg-muted/40 p-4 ring-1 ring-foreground/10">
+    <form key={formKey} onSubmit={handleSubmit} className="space-y-4 border-b border-border py-4">
       <h3 className="heading-4">{heading}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
@@ -229,8 +229,7 @@ export function PositionsSection({ positions, companies, industries, featuredPos
           <div
             key={pos.id}
             className={cn(
-              'flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:flex-row sm:items-start sm:justify-between',
-              resolvedFeaturedId === pos.id && canChooseDisplay && 'ring-primary/40'
+              'flex flex-col gap-3 border-b border-border py-4 sm:flex-row sm:items-start sm:justify-between'
             )}
           >
             <div className="min-w-0">

@@ -80,7 +80,7 @@ export function CompanyAdminList({
       {filtered.length === 0 ? (
         <p className="py-4 text-sm text-muted-foreground">No companies match.</p>
       ) : (
-        <ul className="divide-y divide-border rounded-lg ring-1 ring-foreground/10">
+        <ul className="divide-y divide-border border-y border-border">
           {filtered.map((c) =>
             editingId === c.id ? (
               <li key={c.id} className="p-4">

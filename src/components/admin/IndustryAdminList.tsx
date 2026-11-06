@@ -32,7 +32,7 @@ export function IndustryAdminList({ industries, isFounder }: { industries: Admin
   const [isPending, startTransition] = useTransition()
 
   return (
-    <ul className="divide-y divide-border rounded-lg ring-1 ring-foreground/10">
+    <ul className="divide-y divide-border border-y border-border">
       {industries.map((i) => {
         const inUse = i.companyCount > 0 || i.positionCount > 0
         const usage = `${i.companyCount} ${i.companyCount === 1 ? 'company' : 'companies'} · ${i.positionCount} ${i.positionCount === 1 ? 'position' : 'positions'}`

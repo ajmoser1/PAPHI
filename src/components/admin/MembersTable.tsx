@@ -74,7 +74,7 @@ export function MembersTable({ members }: { members: ActiveMember[] }) {
       {filtered.length === 0 ? (
         <p className="py-6 text-sm text-muted-foreground">No members match.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+        <div className="overflow-x-auto border-y border-border">
           <Table>
             <TableHeader>
               <TableRow>

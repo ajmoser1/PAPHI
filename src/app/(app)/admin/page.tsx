@@ -6,11 +6,11 @@ import { ALUMNI_CONTACT_VISIBLE_SELECT, hasVisibleContact, type VisibleContactIn
 import { inviteRegisterUrl, getSiteOrigin } from '@/lib/site'
 import { getUxPreviewModeForRole } from '@/lib/ux-preview'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AdminSectionBar, type AdminSection } from '@/components/admin/AdminSectionBar'
-import { StatTile } from '@/components/admin/StatTile'
+import { StatRow } from '@/components/admin/StatRow'
+import { ExpandableBlock } from '@/components/admin/ExpandableBlock'
 import { ApprovalList, type PendingMember } from '@/components/admin/ApprovalList'
 import { MembersTable, type ActiveMember } from '@/components/admin/MembersTable'
 import { InviteLinkCard } from '@/components/admin/InviteLinkCard'
@@ -46,15 +46,15 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <Card id={id} className="scroll-mt-32">
-      <CardHeader>
-        <CardTitle as="h2" className="heading-3">
+    <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-32">
+      <div className="mb-4 border-b border-border pb-2">
+        <h2 id={`${id}-heading`} className="heading-3">
           {title}
-        </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+        </h2>
+        {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+      </div>
+      {children}
+    </section>
   )
 }
 
@@ -212,7 +212,7 @@ export default async function AdminDashboardPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <PageHeader
         title="Admin dashboard"
         description={
@@ -225,16 +225,17 @@ export default async function AdminDashboardPage() {
 
       <AdminSectionBar sections={sections} />
 
-      <section id="overview" aria-label="Overview" className="grid scroll-mt-32 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Pending approval" value={pendingMembers.length} href="#approvals" tone={pendingMembers.length ? 'warning' : 'neutral'} hint={pendingMembers.length ? 'Waiting on you' : 'All caught up'} />
-        <StatTile label="Active members" value={activeMembers.length} href="#members" tone="brand" />
-        <StatTile label="Without a photo" value={withoutPhoto} href="#members" tone={withoutPhoto ? 'warning' : 'neutral'} hint="They are asked to add one on sign-in" />
-        {isFounder ? (
-          <StatTile label="Messages this month" value={messagesThisMonth ?? 0} href="#members" hint="Across the whole platform" />
-        ) : (
-          <StatTile label="Companies missing a field" value={missingField} href="#catalog" tone={missingField ? 'warning' : 'neutral'} hint="Filters work better when every company has one" />
-        )}
-      </section>
+      <StatRow
+        id="overview"
+        stats={[
+          { label: 'Pending approval', value: pendingMembers.length, href: '#approvals', tone: pendingMembers.length ? 'warning' : 'neutral' },
+          { label: 'Active members', value: activeMembers.length, href: '#members', tone: 'brand' },
+          { label: 'Without a photo', value: withoutPhoto, href: '#members', tone: withoutPhoto ? 'warning' : 'neutral' },
+          isFounder
+            ? { label: 'Messages this month', value: messagesThisMonth ?? 0, href: '#members', tone: 'neutral' }
+            : { label: 'Companies missing a field', value: missingField, href: '#catalog', tone: missingField ? 'warning' : 'neutral' },
+        ]}
+      />
 
       <SectionCard
         id="approvals"
@@ -244,20 +245,26 @@ export default async function AdminDashboardPage() {
         {pendingMembers.length ? (
           <ApprovalList members={pendingMembers} />
         ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">New registrations show up here. Share your invite link to bring brothers in.</p>
+          <div className="divide-y divide-border">
+            <p className="py-3 text-sm text-muted-foreground">New registrations show up here. Share your invite link to bring brothers in.</p>
             {inviteUrl && <InviteLinkCard inviteUrl={inviteUrl} emptyPending />}
           </div>
         )}
         {pendingMembers.length > 0 && inviteUrl && (
-          <div className="mt-6">
+          <div className="mt-4 border-t border-border">
             <InviteLinkCard inviteUrl={inviteUrl} />
           </div>
         )}
       </SectionCard>
 
       <SectionCard id="members" title={`${activeMembers.length} active ${activeMembers.length === 1 ? 'member' : 'members'}`} description="Everyone approved in your chapter. Removing a member suspends their account.">
-        {activeMembers.length ? <MembersTable members={activeMembers} /> : <p className="text-sm text-muted-foreground">No active members yet.</p>}
+        {activeMembers.length ? (
+          <ExpandableBlock label={`Show all ${activeMembers.length}`} collapsedHint="Search, review, or remove members.">
+            <MembersTable members={activeMembers} />
+          </ExpandableBlock>
+        ) : (
+          <p className="text-sm text-muted-foreground">No active members yet.</p>
+        )}
       </SectionCard>
 
       {chapter && (
@@ -267,6 +274,10 @@ export default async function AdminDashboardPage() {
       )}
 
       <SectionCard id="catalog" title="Companies and career fields" description="Keep the lists members pick from clean, so Find a Brother filters stay useful.">
+        <ExpandableBlock
+          label={`Show ${companyList.length} companies and ${industryList.length} fields`}
+          collapsedHint={missingField ? `${missingField} ${missingField === 1 ? 'company is' : 'companies are'} missing a career field.` : 'Everything has a career field.'}
+        >
         <Tabs defaultValue="companies">
           <TabsList>
             <TabsTrigger value="companies">
@@ -286,11 +297,12 @@ export default async function AdminDashboardPage() {
             <IndustryAdminList industries={industryList} isFounder={isFounder} />
           </TabsContent>
         </Tabs>
+        </ExpandableBlock>
       </SectionCard>
 
       {isFounder && (
         <SectionCard id="chapters" title="Chapters" description="Approve chapter requests, copy invite links, and assign chapter admins.">
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div>
               <h3 className="heading-4 mb-3">{requests.length ? `${requests.length} chapter ${requests.length === 1 ? 'request' : 'requests'}` : 'No chapter requests'}</h3>
               {requests.length ? <ChapterRequestsList requests={requests} /> : <p className="text-sm text-muted-foreground">Requests from the Start a chapter page appear here.</p>}
