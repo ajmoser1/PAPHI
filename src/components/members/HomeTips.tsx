@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { MessageSquareText, Search, UserRoundCheck, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { dismissHomeTips } from '@/actions/profile'
 import { Button } from '@/components/ui/button'
 
@@ -18,7 +19,10 @@ export function HomeTips({ canMessage }: { canMessage: boolean }) {
 
   function dismiss() {
     setHidden(true)
-    startTransition(() => dismissHomeTips())
+    startTransition(async () => {
+      const result = await dismissHomeTips()
+      if (result.message) toast.error(`Couldn't save that: ${result.message}`)
+    })
   }
 
   function focusSearch() {

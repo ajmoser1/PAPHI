@@ -288,13 +288,15 @@ export async function uploadAvatar(formData: FormData) {
 }
 
 /** Hides the "what you can do here" tiles on Find a Brother for this member, on every device. */
-export async function dismissHomeTips() {
+export async function dismissHomeTips(): Promise<{ message?: string }> {
   const { supabase, userId } = await requireAuth()
-  await supabase
+  const { error } = await supabase
     .from('profiles')
     .update({ home_tips_dismissed_at: new Date().toISOString() })
     .eq('id', userId)
+  if (error) return { message: error.message }
   revalidatePath('/members')
+  return {}
 }
 
 export async function removeAvatar() {
@@ -537,11 +539,16 @@ export async function saveProfile(_prev: SaveProfileState, formData: FormData): 
 }
 
 /** Hides the profile-completeness card for good once the profile is complete. */
-export async function dismissCompletenessCard() {
+export async function dismissCompletenessCard(): Promise<{ message?: string }> {
   const { supabase, userId } = await requireAuth()
-  await supabase
+  const { data, error } = await supabase
     .from('profiles')
     .update({ profile_completeness_dismissed_at: new Date().toISOString() })
     .eq('id', userId)
+    .select('profile_completeness_dismissed_at')
+    .maybeSingle()
+  if (error) return { message: error.message }
+  if (!data) return { message: 'Could not save that for your account.' }
   revalidatePath('/profile/edit')
+  return {}
 }

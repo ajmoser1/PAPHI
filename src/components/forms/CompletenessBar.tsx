@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { CheckCircle2, Circle, X } from 'lucide-react'
 import { dismissCompletenessCard } from '@/actions/profile'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+
+const STORAGE_KEY = 'profile-completeness-dismissed'
 
 export type CompletenessItem = { id: string; label: string; done: boolean; href: string; why: string }
 
@@ -26,11 +29,28 @@ export function CompletenessBar({ items, className }: { items: CompletenessItem[
   const next = items.find((i) => !i.done)
   const complete = pct === 100
 
+  // Device-level fallback so the card stays closed even if the server write is slow or fails.
+  useEffect(() => {
+    try {
+      if (complete && localStorage.getItem(STORAGE_KEY) === '1') setHidden(true)
+    } catch {
+      // storage unavailable
+    }
+  }, [complete])
+
   if (hidden) return null
 
   function dismiss() {
     setHidden(true)
-    startTransition(() => dismissCompletenessCard())
+    try {
+      localStorage.setItem(STORAGE_KEY, '1')
+    } catch {
+      // ignore
+    }
+    startTransition(async () => {
+      const result = await dismissCompletenessCard()
+      if (result.message) toast.error(`Couldn't save that: ${result.message}`)
+    })
   }
 
   return (
